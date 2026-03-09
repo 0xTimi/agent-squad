@@ -1,0 +1,75 @@
+#!/bin/bash
+# squad-status.sh — Check squad status
+# Usage: squad-status.sh <squad-name>
+
+set -euo pipefail
+
+SQUAD_NAME="${1:?Usage: squad-status.sh <squad-name>}"
+SQUAD_DIR="${HOME}/.openclaw/workspace/squads/${SQUAD_NAME}"
+TMUX_SESSION="squad-${SQUAD_NAME}"
+
+# --- Check squad exists ---
+if [ ! -d "$SQUAD_DIR" ]; then
+  echo "ERROR: Squad '$SQUAD_NAME' not found."
+  exit 1
+fi
+
+# --- Read engine from squad.json ---
+ENGINE="unknown"
+if [ -f "$SQUAD_DIR/squad.json" ]; then
+  ENGINE=$(python3 -c "import json; print(json.load(open('$SQUAD_DIR/squad.json')).get('engine', 'unknown'))" 2>/dev/null || echo "unknown")
+fi
+
+# --- tmux status ---
+if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+  TMUX_STATUS="running"
+else
+  TMUX_STATUS="stopped"
+fi
+
+# --- Count tasks ---
+count_files() {
+  local dir="$1"
+  find "$dir" -name "task-*.md" 2>/dev/null | wc -l | tr -d ' '
+}
+
+PENDING=$(count_files "$SQUAD_DIR/tasks/pending")
+IN_PROGRESS=$(count_files "$SQUAD_DIR/tasks/in-progress")
+DONE=$(count_files "$SQUAD_DIR/tasks/done")
+
+# --- Current status from reports ---
+CURRENT_REPORT=""
+for report in "$SQUAD_DIR"/reports/task-*.md; do
+  [ -f "$report" ] || continue
+  # Check if report has "in-progress" status
+  if grep -qi "in-progress" "$report" 2>/dev/null; then
+    # Extract ## Current section
+    CURRENT_SECTION=$(sed -n '/^## Current/,/^## /{ /^## Current/d; /^## /d; p; }' "$report" 2>/dev/null | head -5)
+    if [ -n "$CURRENT_SECTION" ]; then
+      REPORT_NAME=$(basename "$report")
+      CURRENT_REPORT="  Report: ${REPORT_NAME}
+${CURRENT_SECTION}"
+    fi
+  fi
+done
+
+# --- Output ---
+echo "Squad: ${SQUAD_NAME}"
+echo "Engine: ${ENGINE}"
+echo "Status: ${TMUX_STATUS}"
+echo "Tasks: ${PENDING} pending, ${IN_PROGRESS} in-progress, ${DONE} done"
+
+if [ -n "$CURRENT_REPORT" ]; then
+  echo ""
+  echo "Current activity:"
+  echo "$CURRENT_REPORT"
+fi
+
+# --- Check for blocked tasks ---
+for report in "$SQUAD_DIR"/reports/task-*.md; do
+  [ -f "$report" ] || continue
+  if grep -qi "^## Blocked" "$report" 2>/dev/null; then
+    echo ""
+    echo "WARNING: $(basename "$report") has a ## Blocked section!"
+  fi
+done
