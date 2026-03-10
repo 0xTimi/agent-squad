@@ -12,6 +12,13 @@ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH}"
 
 SQUADS_DIR="${HOME}/.openclaw/workspace/agent-squad/squads"
 SQUAD_NAME="${1:?Usage: squad-watchdog.sh <squad-name>}"
+
+# --- Validate squad name ---
+if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "ERROR: Invalid squad name '$SQUAD_NAME'."
+  exit 1
+fi
+
 SQUAD_DIR="${SQUADS_DIR}/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 LOG_FILE="${SQUAD_DIR}/logs/watchdog.log"
@@ -43,18 +50,44 @@ if [ ! -f "$SQUAD_JSON" ]; then
   exit 1
 fi
 
-ENGINE_CMD="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['engine_command'])" "$SQUAD_JSON" 2>/dev/null)"
-if [ -z "$ENGINE_CMD" ]; then
-  echo "ERROR: Could not read engine_command from squad.json"
+# Read engine, project_dir, agent_teams from squad.json in a single python3 call
+eval "$(python3 -c "
+import json, sys, shlex
+d = json.load(open(sys.argv[1]))
+print(f'ENGINE={shlex.quote(d.get(\"engine\", \"\"))}')
+print(f'PROJECT_DIR={shlex.quote(d.get(\"project_dir\", \"\"))}')
+print(f'AGENT_TEAMS={\"true\" if d.get(\"agent_teams\") else \"false\"}')
+" "$SQUAD_JSON" 2>/dev/null)"
+
+if [ -z "$ENGINE" ]; then
+  echo "ERROR: Could not read engine from squad.json"
   exit 1
 fi
 
-PROJECT_DIR="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('project_dir', ''))" "$SQUAD_JSON" 2>/dev/null)"
+# Re-derive engine command from engine name (never trust stored engine_command)
+get_engine_command() {
+  case "$1" in
+    claude)    echo "claude --dangerously-skip-permissions" ;;
+    codex)     echo "codex --full-auto" ;;
+    gemini)    echo "gemini" ;;
+    opencode)  echo "opencode" ;;
+    kimi)      echo "kimi" ;;
+    trae)      echo "trae-agent" ;;
+    aider)     echo "aider --yes" ;;
+    goose)     echo "goose" ;;
+    *)         echo "" ;;
+  esac
+}
+
+ENGINE_CMD=$(get_engine_command "$ENGINE")
+if [ -z "$ENGINE_CMD" ]; then
+  echo "ERROR: Unknown engine '$ENGINE'"
+  exit 1
+fi
+
 if [ -z "$PROJECT_DIR" ] || [ ! -d "$PROJECT_DIR" ]; then
   PROJECT_DIR="$SQUAD_DIR"
 fi
-
-AGENT_TEAMS="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('true' if d.get('agent_teams') else 'false')" "$SQUAD_JSON" 2>/dev/null)"
 
 # Build env-prefixed command
 TMUX_CMD="env SQUAD_DIR='${SQUAD_DIR}'"
@@ -70,17 +103,7 @@ if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
   # Session exists — check if the engine is still running inside
   PANE_PID="$(tmux list-panes -t "$TMUX_SESSION" -F '#{pane_pid}' 2>/dev/null | head -1)"
   if [ -n "$PANE_PID" ]; then
-    # Cross-platform child process check
-    HAS_CHILDREN=false
-    if command -v pgrep &>/dev/null; then
-      pgrep -P "$PANE_PID" >/dev/null 2>&1 && HAS_CHILDREN=true
-    else
-      # Fallback: check /proc or ps
-      CHILD_COUNT="$(ps -o pid= -p "$PANE_PID" 2>/dev/null | wc -l | tr -d ' ')"
-      [ "${CHILD_COUNT:-0}" -gt 0 ] && HAS_CHILDREN=true
-    fi
-
-    if [ "$HAS_CHILDREN" = true ]; then
+    if pgrep -P "$PANE_PID" >/dev/null 2>&1; then
       # Engine is running, all good
       exit 0
     fi

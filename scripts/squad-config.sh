@@ -36,14 +36,9 @@ case "$ACTION" in
     # Validate key
     case "$KEY" in
       projects_dir)
-        # Resolve to absolute path
-        if [ -d "$VALUE" ]; then
-          VALUE=$(cd "$VALUE" && pwd)
-        else
-          mkdir -p "$VALUE"
-          VALUE=$(cd "$VALUE" && pwd)
-          echo "Created directory: $VALUE"
-        fi
+        # Resolve to absolute path (mkdir -p is a no-op if it already exists)
+        mkdir -p "$VALUE"
+        VALUE=$(cd "$VALUE" && pwd)
         ;;
       *)
         echo "ERROR: Unknown config key '$KEY'. Supported keys: projects_dir"

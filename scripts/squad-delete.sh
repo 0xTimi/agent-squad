@@ -12,6 +12,12 @@ ARCHIVE_DIR="${BASE_DIR}/.archive"
 
 SQUAD_NAME="${1:?Usage: squad-delete.sh <squad-name> [--confirm]}"
 CONFIRM="${2:-}"
+
+# --- Validate squad name ---
+if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "ERROR: Invalid squad name '$SQUAD_NAME'. Use lowercase alphanumeric with hyphens."
+  exit 1
+fi
 SQUAD_DIR="${SQUADS_DIR}/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 

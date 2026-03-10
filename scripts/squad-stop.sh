@@ -5,6 +5,13 @@
 set -euo pipefail
 
 SQUAD_NAME="${1:?Usage: squad-stop.sh <squad-name>}"
+
+# --- Validate squad name ---
+if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "ERROR: Invalid squad name '$SQUAD_NAME'. Use lowercase alphanumeric with hyphens."
+  exit 1
+fi
+
 TMUX_SESSION="squad-${SQUAD_NAME}"
 SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 CRON_NAME="squad-watchdog-${SQUAD_NAME}"

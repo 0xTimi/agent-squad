@@ -9,6 +9,12 @@ TASK_TITLE="${2:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [p
 OBJECTIVE="${3:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [priority]}"
 PRIORITY="${4:-normal}"
 
+# --- Validate squad name ---
+if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "ERROR: Invalid squad name '$SQUAD_NAME'. Use lowercase alphanumeric with hyphens."
+  exit 1
+fi
+
 SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 
@@ -19,8 +25,8 @@ if [ ! -d "$SQUAD_DIR" ]; then
 fi
 
 # --- Generate filename ---
-DATE=$(date +%Y%m%d) || { echo "ERROR: date command failed"; exit 1; }
-KEBAB_TITLE=$(echo "$TASK_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+DATE=$(date +%Y%m%d)
+KEBAB_TITLE=$(echo "$TASK_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
 TASK_FILE="task-${DATE}-${KEBAB_TITLE}.md"
 TASK_PATH="${SQUAD_DIR}/tasks/pending/${TASK_FILE}"
 
@@ -34,19 +40,21 @@ done
 
 # --- Write task file (atomic) ---
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
-TMP_PATH="${TASK_PATH}.tmp"
+TMP_PATH="${TASK_PATH}.${$}.tmp"
 
-cat > "$TMP_PATH" <<EOF
-# Task: ${TASK_TITLE}
+python3 -c "
+import sys
+title, timestamp, objective, priority, out = sys.argv[1:6]
+content = f'''# Task: {title}
 
 ## Created
-${TIMESTAMP}
+{timestamp}
 
 ## Context
 Assigned by user via agent-squad.
 
 ## Objective
-${OBJECTIVE}
+{objective}
 
 ## Acceptance Criteria
 - [ ] Objective completed as described
@@ -54,8 +62,11 @@ ${OBJECTIVE}
 - [ ] Report updated with results
 
 ## Priority
-${PRIORITY}
-EOF
+{priority}
+'''
+with open(out, 'w') as f:
+    f.write(content)
+" "$TASK_TITLE" "$TIMESTAMP" "$OBJECTIVE" "$PRIORITY" "$TMP_PATH"
 
 if ! mv "$TMP_PATH" "$TASK_PATH"; then
   echo "ERROR: Failed to write task file."

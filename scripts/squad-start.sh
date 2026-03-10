@@ -93,23 +93,8 @@ get_engine_command() {
   esac
 }
 
-get_engine_binary() {
-  local engine="$1"
-  case "$engine" in
-    claude)    echo "claude" ;;
-    codex)     echo "codex" ;;
-    gemini)    echo "gemini" ;;
-    opencode)  echo "opencode" ;;
-    kimi)      echo "kimi" ;;
-    trae)      echo "trae-agent" ;;
-    aider)     echo "aider" ;;
-    goose)     echo "goose" ;;
-    *)         echo "$engine" ;;
-  esac
-}
-
 ENGINE_CMD=$(get_engine_command "$ENGINE")
-ENGINE_BIN=$(get_engine_binary "$ENGINE")
+ENGINE_BIN="${ENGINE_CMD%% *}"
 
 if [ -z "$ENGINE_CMD" ]; then
   echo "ERROR: Unknown engine '$ENGINE'. Supported: claude, codex, gemini, opencode, kimi, trae, aider, goose"
