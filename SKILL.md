@@ -21,12 +21,13 @@ Users can invoke `/agent-squad` directly with optional arguments:
 |---|---|
 | `/agent-squad` | Show squad dashboard (or Getting Started if none exist) |
 | `/agent-squad list` | List all squads |
-| `/agent-squad start backend claude` | Start a squad |
-| `/agent-squad status backend` | Check a squad's status |
-| `/agent-squad stop backend` | Stop a squad |
-| `/agent-squad assign backend "做登录"` | Assign a task |
-| `/agent-squad ping backend` | Nudge a squad to report |
-| `/agent-squad delete backend` | Archive a squad |
+| `/agent-squad start my-squad claude` | Start a squad |
+| `/agent-squad status my-squad` | Check squad status |
+| `/agent-squad stop my-squad` | Stop a squad |
+| `/agent-squad assign my-squad "add login page"` | Assign a task |
+| `/agent-squad ping my-squad` | Nudge squad to report |
+| `/agent-squad delete my-squad` | Archive a squad |
+| `/agent-squad restart my-squad` | Restart a stopped squad |
 
 No arguments or `list` → run `bash {baseDir}/scripts/squad-list.sh`:
 - **If squads exist**: show a clean status dashboard
@@ -34,99 +35,91 @@ No arguments or `list` → run `bash {baseDir}/scripts/squad-list.sh`:
 
 ## Getting Started
 
-When users ask "what is this", "怎么用", "how do I use this", or invoke `/agent-squad` with no squads, give a friendly intro with examples. Match user's language.
-
-Chinese:
-
-> Agent Squad 可以帮你在后台跑 AI 编程团队，7×24 小时自动写代码。你直接跟我说就行，比如：
->
-> - "用 claude 起一个叫 backend 的 squad，项目在 ~/projects/api"
-> - "给 backend 一个任务：实现用户登录"
-> - "backend 进度怎么样了？"
-> - "停掉 backend"
-> - "我有哪些 squad 在跑？"
->
-> 支持的引擎：Claude Code、Codex、Gemini CLI、OpenCode、Kimi、Trae、Aider、Goose
->
-> 要不要现在就起一个试试？
-
-English:
+When users ask "what is this", "how do I use this", or invoke `/agent-squad` with no squads, give a friendly intro with usage examples. Match the user's language.
 
 > Agent Squad runs AI coding agents in the background 24/7. Just tell me what you need:
 >
-> - "Start a squad called backend using claude for ~/projects/api"
-> - "Give backend a task: implement user login"
-> - "How's backend doing?"
-> - "Stop backend"
+> - "Start a squad called my-squad using claude for ~/projects/my-app"
+> - "Give my-squad a task: implement user login"
+> - "How's my-squad doing?"
+> - "Stop my-squad"
 > - "What squads do I have?"
 >
 > Engines: Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, Goose
 >
 > Want to start one now?
 
+If the user asks which engine to use: Claude Code and Codex are recommended for most coding tasks. Gemini CLI is a good free alternative. See `{baseDir}/references/engines.md` for details.
+
 ## What Users Can Do
 
-Users just talk. Here's what they might say and how to respond:
+Users interact through natural language. Here's what they might say and how to respond:
 
 ### Start a squad
 
-User: "用 codex 起一个叫 backend 的 squad" / "start a squad called api with claude for ~/projects/api"
+User: "start a squad called my-squad with claude" / "launch a codex squad for ~/projects/api"
 
 Ask if missing: squad name, engine. Project dir and context are optional.
 
-First-time users: briefly mention squads run in full-auto mode, AI has full access to the project directory.
+First-time users: briefly mention squads run in full-auto mode — the AI has full access to the project directory.
 
-Response: "Squad 'backend' 已经跑起来了，用的是 Codex！随时可以给它派任务。"
+Response: "Squad 'my-squad' is up and running with Claude Code! You can assign tasks anytime."
 
 ### Assign a task
 
-User: "给 backend 一个任务：做用户登录" / "let backend work on JWT auth"
+User: "give my-squad a task: build the login page" / "let my-squad work on JWT auth"
 
 If only one squad exists, use it automatically. If the request is vague, ask for specifics.
 
-Response: "任务已派！backend 马上会开始做 'User Login'。"
+Response: "Task assigned! my-squad will start working on 'Login Page' shortly."
 
 ### Check status
 
-User: "backend 在干嘛？" / "进度如何" / "how's my squad doing?"
+User: "how's my-squad doing?" / "what's the status?" / "is my-squad done yet?"
 
-Response: "backend 正在用 Claude Code 跑，当前在做 'User Login'——正在写表单校验，大概 60%。已完成 2 个任务，1 个进行中。"
+Response: "my-squad is running on Claude Code, working on 'Login Page' — implementing form validation, about 60% done. 2 tasks completed, 1 in progress."
 
 ### Ping for update
 
-User: "催一下 backend" / "let it report progress"
+User: "ping my-squad" / "nudge it to report"
 
-Response: "已经催了 backend 更新进度，稍等一两分钟再看。"
+Response: "I've nudged my-squad to update its progress report. Check back in a minute."
 
 ### Stop a squad
 
-User: "停掉 backend" / "stop the squad"
+User: "stop my-squad" / "pause the squad"
 
 Always confirm before stopping.
 
-Response: "backend 已停止。所有工作都保存了，随时可以重启。"
+Response: "my-squad stopped. All work is saved — you can restart anytime."
+
+### Restart a squad
+
+User: "restart my-squad" / "bring my-squad back up"
+
+Response: "my-squad is back up and running! It will pick up where it left off."
 
 ### List squads
 
-User: "我有哪些 squad？" / "list my squads"
+User: "what squads do I have?" / "list my squads" / "show all squads"
 
-Response: present a clean readable summary of all squads.
+Present a clean readable summary of all squads with name, engine, status, and task counts.
 
 ### Delete a squad
 
-User: "删掉 backend" / "archive the old squad"
+User: "delete my-squad" / "archive the old squad" / "clean up my-squad"
 
-Always ask for confirmation first. Reassure: data is archived, project code never touched.
+Always ask for confirmation first. Reassure: data is archived, project code is never touched.
 
 ### Configure
 
-User: "把默认项目目录改成 ~/code" / "show squad settings"
+User: "set default project dir to ~/code" / "show squad settings"
 
 ---
 
 ## Script Reference
 
-All scripts at `{baseDir}/scripts/`. Execute scripts based on user intent above and present results conversationally.
+All scripts at `{baseDir}/scripts/`. Execute based on user intent above and present results conversationally.
 
 ### squad-start.sh
 
@@ -134,12 +127,11 @@ All scripts at `{baseDir}/scripts/`. Execute scripts based on user intent above 
 bash {baseDir}/scripts/squad-start.sh "<name>" "<engine>" "<context>" [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]
 ```
 
-Parameters:
 - name: lowercase alphanumeric + hyphens
 - engine: claude, codex, gemini, opencode, kimi, trae, aider, goose
 - context: optional project background
 - `--project <dir>`: custom code output directory
-- `--restart`: required if squad name already exists
+- `--restart`: required if squad name already exists (also used for restart intent)
 - `--agent-teams`: claude only, multi-agent mode
 - `--no-watchdog`: skip auto-restart cron
 
@@ -181,7 +173,7 @@ bash {baseDir}/scripts/squad-list.sh
 
 ```bash
 bash {baseDir}/scripts/squad-delete.sh "<name>"          # show summary
-bash {baseDir}/scripts/squad-delete.sh "<name>" --confirm # confirm delete
+bash {baseDir}/scripts/squad-delete.sh "<name>" --confirm # confirm archive
 ```
 
 ### squad-config.sh
@@ -193,12 +185,13 @@ bash {baseDir}/scripts/squad-config.sh set projects_dir "<path>"
 
 ## Guidelines
 
-- If only one squad exists, use it automatically
+- If only one squad exists, use it automatically — don't ask "which squad?"
 - One engine per squad — suggest multiple squads for multiple engines
 - Don't modify task/report files directly — only via assign script
 - If squad is stopped and user assigns a task, write it anyway — picked up on restart
 - Squads auto-init git repos; for existing projects suggest a separate branch
-- Watchdog auto-restarts crashed squads by default
+- Watchdog auto-restarts crashed squads every 5 min by default
+- For restart: stop the squad first (`squad-stop.sh`), then start with `--restart` flag
 
 ## Engine Reference
 
