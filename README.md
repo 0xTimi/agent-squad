@@ -19,7 +19,7 @@ An [OpenClaw](https://openclaw.ai) skill that runs persistent AI coding agents i
 /skill install agent-squad
 
 # Or via CLI
-clawhub install agent-squad
+npx clawhub@latest install agent-squad
 ```
 
 **Requirements:** tmux, python3, and at least one AI engine CLI.
