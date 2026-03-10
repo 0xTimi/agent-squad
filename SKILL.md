@@ -1,6 +1,6 @@
 ---
 name: agent-squad
-version: 1.0.0
+version: 0.9.0
 description: "Manage persistent AI coding squads that run in tmux sessions with task queues, progress reports, and automatic health monitoring. Use when the user wants to: (1) start/launch/create/restart a squad or team of AI agents, (2) assign/give tasks to a squad, (3) check squad status or ask what a squad is doing, (4) ping/nudge a squad to report progress, (5) stop a squad, (6) list all active squads, (7) configure squad settings like default project directory, (8) delete/archive a squad. Supports Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, and Goose as AI engines."
 metadata:
   { "openclaw": { "requires": { "anyBins": ["tmux"], "bins": ["python3"] } } }
@@ -58,7 +58,7 @@ If the squad name already exists (from a previous run), the script will error an
 **Environment checks** (automatic):
 - tmux and python3 must be installed
 - The chosen AI engine binary must be in PATH
-- Engine-specific checks: codex warns if project is not a git repo, gemini warns if API key is missing
+- Engine-specific checks: codex warns if project is not a git repo, gemini uses Google OAuth (run `gemini` once to login)
 - openclaw is checked for watchdog cron registration (optional — squad works without it but won't auto-recover)
 
 After success, respond with the squad name, engine, project directory, and coordination directory. Include how to assign tasks, check status, and stop.

@@ -6,7 +6,7 @@
 |-------------|-----------|--------------------------------------------------|--------------------------------|
 | claude      | claude    | claude --dangerously-skip-permissions            | Richest feature set, agent teams |
 | codex       | codex     | codex --full-auto                                | Rust-based, low latency. Needs git repo |
-| gemini      | gemini    | gemini                                           | 1M context, generous free tier |
+| gemini      | gemini    | gemini                                           | 1M context, Google OAuth login (run `gemini` once to auth) |
 | opencode    | opencode  | opencode                                         | 75+ model providers, open-source |
 | kimi        | kimi      | kimi                                             | Moonshot AI, ACP compatible    |
 | trae        | trae-agent| trae-agent                                       | ByteDance, multi-LLM support   |
@@ -31,7 +31,7 @@ The watchdog and start scripts will use `engine_command` if present, falling bac
 - **All engines**: Must support unattended operation (no interactive permission prompts)
 - **codex**: Requires a git repository in the working directory. The start script will warn if the target is not a git repo.
 - **claude**: `--dangerously-skip-permissions` bypasses all safety prompts. Ensure the working directory contains no sensitive files.
-- **gemini**: May require `GEMINI_API_KEY` environment variable.
+- **gemini**: Uses Google OAuth login (same as Claude Code / Codex). Run `gemini` once in a terminal to complete the browser login flow before starting a squad. No API key needed.
 - **opencode**: Configuration via `~/.opencode/config.json`.
 
 ## Security Note

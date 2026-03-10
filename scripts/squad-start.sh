@@ -116,9 +116,8 @@ case "$ENGINE" in
     fi
     ;;
   gemini)
-    if [ -z "${GEMINI_API_KEY:-}" ]; then
-      echo "WARNING: GEMINI_API_KEY environment variable is not set. Gemini may fail to start."
-    fi
+    # Gemini CLI authenticates via Google OAuth (browser login), same as Claude Code and Codex.
+    # No API key needed. Run `gemini` once to complete the login flow before starting a squad.
     ;;
 esac
 

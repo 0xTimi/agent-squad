@@ -36,7 +36,7 @@ Options:
 
 Engine-specific checks run automatically:
 - `codex` warns if the project is not a git repo
-- `gemini` warns if `GEMINI_API_KEY` is not set
+- `gemini` uses Google OAuth login (run `gemini` once to auth before starting a squad)
 
 ### Assign a Task
 
@@ -166,7 +166,7 @@ All engines run in full-auto mode (no permission prompts) since squads operate u
 |--------|--------|-------------|-------|
 | Claude Code | `claude` | `claude --dangerously-skip-permissions` | Supports `--agent-teams` for multi-agent |
 | Codex | `codex` | `codex --full-auto` | Requires git repo |
-| Gemini CLI | `gemini` | `gemini` | Requires `GEMINI_API_KEY` |
+| Gemini CLI | `gemini` | `gemini` | Google OAuth login (run `gemini` once to auth) |
 | OpenCode | `opencode` | `opencode` | |
 | Kimi | `kimi` | `kimi` | |
 | Trae | `trae-agent` | `trae-agent` | ByteDance |
