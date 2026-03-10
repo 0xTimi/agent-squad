@@ -5,6 +5,7 @@
 set -euo pipefail
 
 SQUAD_NAME="${1:?Usage: squad-ping.sh <squad-name>}"
+SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 
 # --- Check tmux session exists ---
@@ -14,8 +15,10 @@ if ! tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
 fi
 
 # --- Send ping ---
-tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
-sleep 1
-tmux send-keys -t "$TMUX_SESSION" "Please update your report now: write your current progress, completed items, any issues, and next steps to the appropriate reports/task-*.md file. Update the ## Current section so it reflects your real-time state." Enter
+{
+  tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
+  sleep 1
+  tmux send-keys -t "$TMUX_SESSION" "Please update your report now: write your current progress, completed items, any issues, and next steps to ${SQUAD_DIR}/reports/. Update the ## Current section so it reflects your real-time state." Enter
+} 2>/dev/null || true
 
 echo "Pinged squad '$SQUAD_NAME'. Check status in a minute to see the updated report."

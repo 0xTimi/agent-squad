@@ -9,6 +9,7 @@ Your job is to pick up tasks, execute them (spawning sub-agents when needed), an
 tasks/pending/          <- New tasks appear here
 tasks/in-progress/      <- Move tasks here when you start working
 tasks/done/             <- Move tasks here when finished
+tasks/cancelled/        <- Cancelled tasks (moved by user)
 reports/task-<name>.md  <- One report per task, updated continuously
 logs/                   <- Logs and summaries
 PROTOCOL.md             <- This file (your instructions)
@@ -98,7 +99,7 @@ The ## Current section must always reflect your real-time state. Anyone checking
 
 - One task per file. Never delete tasks — move to `done/`.
 - Filenames include date: `task-YYYYMMDD-<kebab-name>.md`
-- All timestamps: ISO 8601 with timezone (e.g., `2026-03-09T14:00+08:00`)
+- All timestamps: ISO 8601 UTC (e.g., `2026-03-09T14:00:00+00:00`)
 - Atomic writes: write to `.tmp` first, then `mv` to `.md`. Ignore `.tmp` files when reading.
 
 ## On Startup

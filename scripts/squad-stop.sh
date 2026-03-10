@@ -18,9 +18,11 @@ else
 fi
 
 # --- Remove watchdog cron ---
-openclaw cron remove --name "$CRON_NAME" 2>/dev/null && \
-  echo "Removed watchdog cron: $CRON_NAME" || \
-  echo "No watchdog cron found for '$CRON_NAME'."
+if command -v openclaw &>/dev/null; then
+  openclaw cron remove --name "$CRON_NAME" 2>/dev/null && \
+    echo "Removed watchdog cron: $CRON_NAME" || \
+    echo "No watchdog cron found for '$CRON_NAME'."
+fi
 
 # --- Log the stop event ---
 if [ -d "$SQUAD_DIR/logs" ]; then
@@ -31,4 +33,4 @@ echo ""
 echo "Squad '$SQUAD_NAME' stopped. All data preserved at:"
 echo "  $SQUAD_DIR"
 echo ""
-echo "To restart: squad-start.sh $SQUAD_NAME <engine>"
+echo "To restart: squad-start.sh $SQUAD_NAME <engine> --restart"

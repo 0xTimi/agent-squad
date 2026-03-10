@@ -1,6 +1,6 @@
 #!/bin/bash
 # squad-start.sh — Create and launch a new squad
-# Usage: squad-start.sh <squad-name> <engine> [context-text]
+# Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]
 
 set -euo pipefail
 
@@ -8,6 +8,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 BASE_DIR="${HOME}/.openclaw/workspace/agent-squad"
 SQUADS_DIR="${BASE_DIR}/squads"
+
+# --- Check python3 is available (needed for JSON handling) ---
+if ! command -v python3 &>/dev/null; then
+  echo "ERROR: python3 is required but not found in PATH."
+  exit 1
+fi
 
 # --- Args ---
 SQUAD_NAME="${1:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]}"
@@ -32,7 +38,7 @@ done
 if [ -z "$PROJECT_DIR" ]; then
   CONFIGURED_DIR=""
   if [ -f "${BASE_DIR}/config.json" ]; then
-    CONFIGURED_DIR=$(python3 -c "import json; print(json.load(open('${BASE_DIR}/config.json')).get('projects_dir', ''))" 2>/dev/null || echo "")
+    CONFIGURED_DIR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('projects_dir', ''))" "${BASE_DIR}/config.json" 2>/dev/null || echo "")
   fi
   if [ -n "$CONFIGURED_DIR" ]; then
     PROJECT_DIR="${CONFIGURED_DIR}/${SQUAD_NAME}"
@@ -116,6 +122,21 @@ if ! command -v "$ENGINE_BIN" &>/dev/null; then
   exit 1
 fi
 
+# --- Engine-specific validation ---
+case "$ENGINE" in
+  codex)
+    if [ ! -d "$PROJECT_DIR/.git" ]; then
+      echo "WARNING: codex requires a git repository. '$PROJECT_DIR' is not a git repo."
+      echo "         Run 'git init' in the project directory first, or codex may fail."
+    fi
+    ;;
+  gemini)
+    if [ -z "${GEMINI_API_KEY:-}" ]; then
+      echo "WARNING: GEMINI_API_KEY environment variable is not set. Gemini may fail to start."
+    fi
+    ;;
+esac
+
 # --- Validate --agent-teams flag ---
 if [ "$AGENT_TEAMS" = true ] && [ "$ENGINE" != "claude" ]; then
   echo "ERROR: --agent-teams is only supported with the claude engine."
@@ -130,6 +151,10 @@ fi
 
 if [ -d "$SQUAD_DIR" ]; then
   if [ "$RESTART" = true ]; then
+    if [ ! -f "$SQUAD_DIR/squad.json" ]; then
+      echo "ERROR: Squad directory exists but squad.json is missing or corrupted."
+      exit 1
+    fi
     echo "Restarting squad '$SQUAD_NAME' with existing data."
   else
     echo "ERROR: Squad '$SQUAD_NAME' already exists at $SQUAD_DIR"
@@ -141,41 +166,63 @@ if [ -d "$SQUAD_DIR" ]; then
 fi
 
 # --- Create directory structure ---
-mkdir -p "$SQUAD_DIR"/{tasks/pending,tasks/in-progress,tasks/done,reports,logs}
+mkdir -p "$SQUAD_DIR"/{tasks/pending,tasks/in-progress,tasks/done,tasks/cancelled,reports,logs}
 
-# --- Write squad.json ---
-cat > "$SQUAD_DIR/squad.json" <<EOF
-{
-  "name": "${SQUAD_NAME}",
-  "engine": "${ENGINE}",
-  "engine_command": "${ENGINE_CMD}",
-  "agent_teams": ${AGENT_TEAMS},
-  "project_dir": "${PROJECT_DIR}",
-  "tmux_session": "${TMUX_SESSION}",
-  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)",
-  "squads_dir": "${SQUADS_DIR}"
+# --- Write squad.json (safe via python3) ---
+python3 -c "
+import json, sys
+data = {
+    'name': sys.argv[1],
+    'engine': sys.argv[2],
+    'engine_command': sys.argv[3],
+    'agent_teams': sys.argv[4] == 'true',
+    'project_dir': sys.argv[5],
+    'tmux_session': sys.argv[6],
+    'created_at': sys.argv[7],
+    'squads_dir': sys.argv[8]
 }
-EOF
+with open(sys.argv[9], 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" "$SQUAD_NAME" "$ENGINE" "$ENGINE_CMD" "$AGENT_TEAMS" "$PROJECT_DIR" "$TMUX_SESSION" \
+  "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" "$SQUADS_DIR" "$SQUAD_DIR/squad.json"
 
 # --- Render PROTOCOL.md from template ---
 if [ ! -f "$SQUAD_DIR/PROTOCOL.md" ]; then
-  sed \
-    -e "s|{{SQUAD_NAME}}|${SQUAD_NAME}|g" \
-    -e "s|{{ENGINE}}|${ENGINE}|g" \
-    "$SKILL_DIR/assets/PROTOCOL.md.template" \
-    > "$SQUAD_DIR/PROTOCOL.md"
+  TEMPLATE="$SKILL_DIR/assets/PROTOCOL.md.template"
+  if [ ! -f "$TEMPLATE" ]; then
+    echo "ERROR: Template not found: $TEMPLATE"
+    exit 1
+  fi
+  # Use python3 for safe template rendering (no sed escaping issues)
+  python3 -c "
+import sys
+with open(sys.argv[1]) as f:
+    content = f.read()
+content = content.replace('{{SQUAD_NAME}}', sys.argv[2])
+content = content.replace('{{ENGINE}}', sys.argv[3])
+with open(sys.argv[4], 'w') as f:
+    f.write(content)
+" "$TEMPLATE" "$SQUAD_NAME" "$ENGINE" "$SQUAD_DIR/PROTOCOL.md"
 fi
 
 # --- Write CONTEXT.md if provided ---
 if [ -n "$CONTEXT" ] && [ ! -f "$SQUAD_DIR/CONTEXT.md" ]; then
-  sed \
-    -e "s|{{CONTEXT}}|${CONTEXT}|g" \
-    "$SKILL_DIR/assets/CONTEXT.md.template" \
-    > "$SQUAD_DIR/CONTEXT.md"
+  CONTEXT_TEMPLATE="$SKILL_DIR/assets/CONTEXT.md.template"
+  if [ -f "$CONTEXT_TEMPLATE" ]; then
+    python3 -c "
+import sys
+with open(sys.argv[1]) as f:
+    content = f.read()
+content = content.replace('{{CONTEXT}}', sys.argv[2])
+with open(sys.argv[3], 'w') as f:
+    f.write(content)
+" "$CONTEXT_TEMPLATE" "$CONTEXT" "$SQUAD_DIR/CONTEXT.md"
+  fi
 fi
 
 # --- Add .gitkeep files ---
-for dir in tasks/pending tasks/in-progress tasks/done reports; do
+for dir in tasks/pending tasks/in-progress tasks/done tasks/cancelled reports; do
   touch "$SQUAD_DIR/$dir/.gitkeep" 2>/dev/null || true
 done
 
@@ -188,17 +235,18 @@ if [ ! -f "$SQUAD_DIR/logs/.gitignore" ]; then
 GITIGNORE
 fi
 
-# --- Start tmux session (cwd = project dir, SQUAD_DIR env var for coordination) ---
-TMUX_ENV="SQUAD_DIR=${SQUAD_DIR}"
+# --- Start tmux session (cwd = project dir, env vars for coordination) ---
+TMUX_CMD="env SQUAD_DIR='${SQUAD_DIR}'"
 if [ "$AGENT_TEAMS" = true ]; then
-  TMUX_ENV="$TMUX_ENV CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
+  TMUX_CMD="$TMUX_CMD CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
 fi
-tmux new-session -d -s "$TMUX_SESSION" -c "$PROJECT_DIR" "$TMUX_ENV $ENGINE_CMD"
+TMUX_CMD="$TMUX_CMD $ENGINE_CMD"
+tmux new-session -d -s "$TMUX_SESSION" -c "$PROJECT_DIR" "$TMUX_CMD"
 
 # --- Send initial prompt ---
 {
   sleep 5
-  INIT_PROMPT="You are ${SQUAD_NAME}, a persistent development coordinator. Your coordination directory is ${SQUAD_DIR} — read ${SQUAD_DIR}/PROTOCOL.md for your full instructions. Check ${SQUAD_DIR}/CONTEXT.md if it exists for project background. Your code goes in the current directory (${PROJECT_DIR}). Check ${SQUAD_DIR}/tasks/pending/ for new tasks and ${SQUAD_DIR}/tasks/in-progress/ for tasks to resume. Write reports to ${SQUAD_DIR}/reports/. Start working."
+  INIT_PROMPT="You are ${SQUAD_NAME}, a persistent AI development coordinator. Your coordination directory is ${SQUAD_DIR} — read ${SQUAD_DIR}/PROTOCOL.md immediately, it contains your complete instructions. Check ${SQUAD_DIR}/CONTEXT.md if it exists for project background. Your code goes in the current directory (${PROJECT_DIR}). Check ${SQUAD_DIR}/tasks/pending/ for new tasks and ${SQUAD_DIR}/tasks/in-progress/ for tasks to resume. Write reports to ${SQUAD_DIR}/reports/. Begin."
   tmux send-keys -t "$TMUX_SESSION" "$INIT_PROMPT" Enter
 } &
 
@@ -212,7 +260,7 @@ if [ "$OPENCLAW_AVAILABLE" = true ]; then
 
   openclaw cron add \
     --name "$CRON_NAME" \
-    --cron "*/10 * * * *" \
+    --cron "*/5 * * * *" \
     --session isolated \
     --light-context \
     --message "Run this command to check squad health: bash ${WATCHDOG_PATH} ${SQUAD_NAME}. If the script reports the squad restarted, say so. If healthy, do nothing." \
@@ -231,7 +279,7 @@ echo "  Project:     ${PROJECT_DIR}"
 echo "  Squad data:  ${SQUAD_DIR}"
 echo "  tmux:        tmux attach -t ${TMUX_SESSION}  (Ctrl+B D to detach)"
 if [ "$OPENCLAW_AVAILABLE" = true ]; then
-  echo "  Watchdog:    openclaw cron (every 10 min)"
+  echo "  Watchdog:    openclaw cron (every 5 min)"
 else
   echo "  Watchdog:    not registered (openclaw not found)"
 fi

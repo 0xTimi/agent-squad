@@ -14,10 +14,12 @@ if [ ! -d "$SQUAD_DIR" ]; then
   exit 1
 fi
 
-# --- Read engine from squad.json ---
+# --- Read engine and project_dir from squad.json (safe via sys.argv) ---
 ENGINE="unknown"
-if [ -f "$SQUAD_DIR/squad.json" ]; then
-  ENGINE=$(python3 -c "import json; print(json.load(open('$SQUAD_DIR/squad.json')).get('engine', 'unknown'))" 2>/dev/null || echo "unknown")
+PROJECT_DIR=""
+if [ -f "$SQUAD_DIR/squad.json" ] && command -v python3 &>/dev/null; then
+  ENGINE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('engine', 'unknown'))" "$SQUAD_DIR/squad.json" 2>/dev/null || echo "unknown")
+  PROJECT_DIR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('project_dir', ''))" "$SQUAD_DIR/squad.json" 2>/dev/null || echo "")
 fi
 
 # --- tmux status ---
@@ -30,7 +32,7 @@ fi
 # --- Count tasks ---
 count_files() {
   local dir="$1"
-  find "$dir" -name "task-*.md" 2>/dev/null | wc -l | tr -d ' '
+  find "$dir" -maxdepth 1 -name "task-*.md" -type f 2>/dev/null | wc -l | tr -d ' '
 }
 
 PENDING=$(count_files "$SQUAD_DIR/tasks/pending")
@@ -44,7 +46,7 @@ for report in "$SQUAD_DIR"/reports/task-*.md; do
   # Check if report has "in-progress" status
   if grep -qi "in-progress" "$report" 2>/dev/null; then
     # Extract ## Current section
-    CURRENT_SECTION=$(sed -n '/^## Current/,/^## /{ /^## Current/d; /^## /d; p; }' "$report" 2>/dev/null | head -5)
+    CURRENT_SECTION=$(sed -n '/^## Current/,/^## /{ /^## Current/d; /^## /d; p; }' "$report" 2>/dev/null | head -5) || true
     if [ -n "$CURRENT_SECTION" ]; then
       REPORT_NAME=$(basename "$report")
       CURRENT_REPORT="  Report: ${REPORT_NAME}
@@ -57,6 +59,9 @@ done
 echo "Squad: ${SQUAD_NAME}"
 echo "Engine: ${ENGINE}"
 echo "Status: ${TMUX_STATUS}"
+if [ -n "$PROJECT_DIR" ]; then
+  echo "Project: ${PROJECT_DIR}"
+fi
 echo "Tasks: ${PENDING} pending, ${IN_PROGRESS} in-progress, ${DONE} done"
 
 if [ -n "$CURRENT_REPORT" ]; then

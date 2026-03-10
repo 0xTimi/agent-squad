@@ -22,10 +22,10 @@ for squad_dir in "$SQUADS_DIR"/*/; do
   # Skip hidden dirs and .archive
   [[ "$SQUAD_NAME" == .* ]] && continue
 
-  # Read engine
+  # Read engine (safe via sys.argv)
   ENGINE="?"
-  if [ -f "$squad_dir/squad.json" ]; then
-    ENGINE=$(python3 -c "import json; print(json.load(open('${squad_dir}squad.json')).get('engine', '?'))" 2>/dev/null || echo "?")
+  if [ -f "$squad_dir/squad.json" ] && command -v python3 &>/dev/null; then
+    ENGINE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('engine', '?'))" "$squad_dir/squad.json" 2>/dev/null || echo "?")
   fi
 
   # tmux status
@@ -36,9 +36,9 @@ for squad_dir in "$SQUADS_DIR"/*/; do
   fi
 
   # Count tasks
-  PENDING=$(find "$squad_dir/tasks/pending" -name "task-*.md" 2>/dev/null | wc -l | tr -d ' ')
-  IN_PROG=$(find "$squad_dir/tasks/in-progress" -name "task-*.md" 2>/dev/null | wc -l | tr -d ' ')
-  DONE=$(find "$squad_dir/tasks/done" -name "task-*.md" 2>/dev/null | wc -l | tr -d ' ')
+  PENDING=$(find "$squad_dir/tasks/pending" -maxdepth 1 -name "task-*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+  IN_PROG=$(find "$squad_dir/tasks/in-progress" -maxdepth 1 -name "task-*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+  DONE=$(find "$squad_dir/tasks/done" -maxdepth 1 -name "task-*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
 
   if [ "$SQUAD_COUNT" -eq 0 ]; then
     printf "%-20s %-12s %-10s %s\n" "SQUAD" "ENGINE" "STATUS" "TASKS (P/A/D)"

@@ -8,6 +8,12 @@ set -euo pipefail
 BASE_DIR="${HOME}/.openclaw/workspace/agent-squad"
 CONFIG_FILE="${BASE_DIR}/config.json"
 
+# --- Check python3 ---
+if ! command -v python3 &>/dev/null; then
+  echo "ERROR: python3 is required but not found in PATH."
+  exit 1
+fi
+
 ACTION="${1:?Usage: squad-config.sh show | set <key> <value>}"
 
 case "$ACTION" in
@@ -15,7 +21,7 @@ case "$ACTION" in
     if [ -f "$CONFIG_FILE" ]; then
       echo "Config: $CONFIG_FILE"
       echo ""
-      cat "$CONFIG_FILE"
+      python3 -c "import json,sys; [print(f'  {k}: {v}') for k,v in json.load(open(sys.argv[1])).items()]" "$CONFIG_FILE"
     else
       echo "No config file found. Using defaults."
       echo ""
@@ -31,9 +37,11 @@ case "$ACTION" in
     case "$KEY" in
       projects_dir)
         # Resolve to absolute path
-        VALUE=$(cd "$VALUE" 2>/dev/null && pwd || echo "$VALUE")
-        if [ ! -d "$VALUE" ]; then
+        if [ -d "$VALUE" ]; then
+          VALUE=$(cd "$VALUE" && pwd)
+        else
           mkdir -p "$VALUE"
+          VALUE=$(cd "$VALUE" && pwd)
           echo "Created directory: $VALUE"
         fi
         ;;
@@ -43,26 +51,22 @@ case "$ACTION" in
         ;;
     esac
 
-    # Write config
+    # Write config (safe via sys.argv)
     mkdir -p "$BASE_DIR"
-    if [ -f "$CONFIG_FILE" ]; then
-      # Update existing config
-      python3 -c "
-import json
-with open('$CONFIG_FILE') as f:
-    config = json.load(f)
-config['$KEY'] = '$VALUE'
-with open('$CONFIG_FILE', 'w') as f:
+    python3 -c "
+import json, sys, os
+config_file = sys.argv[1]
+key = sys.argv[2]
+value = sys.argv[3]
+config = {}
+if os.path.exists(config_file):
+    with open(config_file) as f:
+        config = json.load(f)
+config[key] = value
+with open(config_file, 'w') as f:
     json.dump(config, f, indent=2)
-"
-    else
-      # Create new config
-      python3 -c "
-import json
-with open('$CONFIG_FILE', 'w') as f:
-    json.dump({'$KEY': '$VALUE'}, f, indent=2)
-"
-    fi
+    f.write('\n')
+" "$CONFIG_FILE" "$KEY" "$VALUE"
 
     echo "Set $KEY = $VALUE"
     echo "New squads will use this setting. Existing squads are not affected."

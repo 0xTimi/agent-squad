@@ -19,16 +19,18 @@ if [ ! -d "$SQUAD_DIR" ]; then
 fi
 
 # --- Generate filename ---
-DATE=$(date +%Y%m%d)
+DATE=$(date +%Y%m%d) || { echo "ERROR: date command failed"; exit 1; }
 KEBAB_TITLE=$(echo "$TASK_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
 TASK_FILE="task-${DATE}-${KEBAB_TITLE}.md"
 TASK_PATH="${SQUAD_DIR}/tasks/pending/${TASK_FILE}"
 
-# --- Avoid overwrite ---
-if [ -f "$TASK_PATH" ]; then
-  TASK_FILE="task-${DATE}-${KEBAB_TITLE}-$(date +%H%M%S).md"
+# --- Find unique filename ---
+COUNTER=0
+while [ -f "$TASK_PATH" ]; do
+  COUNTER=$((COUNTER + 1))
+  TASK_FILE="task-${DATE}-${KEBAB_TITLE}-${COUNTER}.md"
   TASK_PATH="${SQUAD_DIR}/tasks/pending/${TASK_FILE}"
-fi
+done
 
 # --- Write task file (atomic) ---
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
@@ -55,14 +57,19 @@ ${OBJECTIVE}
 ${PRIORITY}
 EOF
 
-mv "$TMP_PATH" "$TASK_PATH"
+if ! mv "$TMP_PATH" "$TASK_PATH"; then
+  echo "ERROR: Failed to write task file."
+  rm -f "$TMP_PATH"
+  exit 1
+fi
 
 # --- Notify squad via tmux if running ---
 if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
-  tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
-  sleep 1
-  tmux send-keys -t "$TMUX_SESSION" "New task assigned: check ${SQUAD_DIR}/tasks/pending/${TASK_FILE} and start working on it." Enter
-  echo "Task assigned and squad notified."
+  {
+    tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
+    sleep 1
+    tmux send-keys -t "$TMUX_SESSION" "New task assigned: check ${SQUAD_DIR}/tasks/pending/${TASK_FILE} and start working on it." Enter
+  } 2>/dev/null && echo "Task assigned and squad notified." || echo "Task assigned. Could not notify squad via tmux (it may still be initializing)."
 else
   echo "Task assigned. Squad is not currently running — it will pick up the task when restarted."
 fi
