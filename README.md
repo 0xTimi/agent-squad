@@ -2,14 +2,18 @@
 
 **Your AI coding squad works 24/7 — non-stop coding in the background, ready for your review anytime.**
 
-An [OpenClaw](https://openclaw.ai) skill that runs persistent AI coding agents in tmux sessions. Assign tasks, they code around the clock. Check in whenever you want. If they crash, they auto-restart.
+An [OpenClaw](https://openclaw.ai) skill that runs persistent AI coding agents in [tmux](https://github.com/tmux/tmux) sessions. Assign tasks, they code around the clock. Check in whenever you want. If they crash, they auto-restart.
+
+Built on tmux instead of ACP — because you can't monitor, peek at, or auto-restart what you can't see. OpenClaw's built-in ACP agents work well for short tasks, but 24/7 coding needs agents that stay alive, accept new orders anytime, and survive crashes.
 
 ## Highlights
 
 - **24/7 non-stop** — Your squad keeps coding while you sleep
-- **Crash-proof** — Watchdog auto-restarts agents if they go down
+- **Peek & command** — See the agent's live screen without interrupting it, or send instructions anytime
 - **8 AI engines** — Claude Code, Codex, Gemini, OpenCode, Kimi, Trae, Aider, Goose
+- **Crash-proof** — Watchdog auto-restarts agents if they go down
 - **Task queue** — Drop tasks in, the squad works through them
+- **Token tracking** — Monitor token usage per task across all engines
 - **Natural language** — Manage squads through conversation via OpenClaw
 
 ## Install
