@@ -214,7 +214,7 @@ with open(sys.argv[9], 'w') as f:
 
 # --- Render PROTOCOL.md from template ---
 if [ ! -f "$SQUAD_DIR/PROTOCOL.md" ]; then
-  TEMPLATE="$SKILL_DIR/assets/PROTOCOL.md.template"
+  TEMPLATE="$SKILL_DIR/assets/PROTOCOL-template.md"
   if [ ! -f "$TEMPLATE" ]; then
     echo "ERROR: Template not found: $TEMPLATE"
     exit 1
@@ -233,7 +233,7 @@ fi
 
 # --- Write CONTEXT.md if provided ---
 if [ -n "$CONTEXT" ] && [ ! -f "$SQUAD_DIR/CONTEXT.md" ]; then
-  CONTEXT_TEMPLATE="$SKILL_DIR/assets/CONTEXT.md.template"
+  CONTEXT_TEMPLATE="$SKILL_DIR/assets/CONTEXT-template.md"
   if [ -f "$CONTEXT_TEMPLATE" ]; then
     python3 -c "
 import sys
