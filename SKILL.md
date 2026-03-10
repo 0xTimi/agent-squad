@@ -1,6 +1,6 @@
 ---
 name: agent-squad
-version: 0.9.1
+version: 0.9.2
 license: MIT-0
 description: "Manage persistent AI coding squads that run in tmux sessions with task queues, progress reports, and automatic health monitoring. Use when the user wants to: (1) start/launch/create/restart a squad or team of AI agents, (2) assign/give tasks to a squad, (3) check squad status or ask what a squad is doing, (4) ping/nudge a squad to report progress, (5) stop a squad, (6) list all active squads, (7) configure squad settings like default project directory, (8) delete/archive a squad. Supports Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, and Goose as AI engines."
 metadata:
@@ -11,177 +11,195 @@ metadata:
 
 GitHub: https://github.com/0xTimi/agent-squad
 
-Run persistent AI development squads in tmux sessions. Each squad has a coordinator AI that picks up tasks, executes them, and reports progress — all while running unattended in the background.
+Run persistent AI coding squads in tmux. Squads pick up tasks, write code, and report progress — 24/7 in the background.
 
-## Prerequisites
+## Slash Command Usage
 
-- **tmux** must be installed (`brew install tmux` on macOS, `apt install tmux` on Linux)
-- **python3** must be available (used for JSON handling)
-- At least one AI engine CLI installed (claude, codex, gemini, opencode, etc.)
-- AI engines run in **full-auto mode** (no permission prompts) since squads are unattended. This means the AI can read, write, and execute any code in the project directory without asking. **Only run squads on projects you trust.** See `references/engines.md` for details.
+Users can invoke `/agent-squad` directly with optional arguments:
 
-## Directory Layout
+| Command | Action |
+|---|---|
+| `/agent-squad` | Show squad dashboard (or Getting Started if none exist) |
+| `/agent-squad list` | List all squads |
+| `/agent-squad start backend claude` | Start a squad |
+| `/agent-squad status backend` | Check a squad's status |
+| `/agent-squad stop backend` | Stop a squad |
+| `/agent-squad assign backend "做登录"` | Assign a task |
+| `/agent-squad ping backend` | Nudge a squad to report |
+| `/agent-squad delete backend` | Archive a squad |
 
-Squads store data separately from project code:
+No arguments or `list` → run `bash {baseDir}/scripts/squad-list.sh`:
+- **If squads exist**: show a clean status dashboard
+- **If no squads**: show the Getting Started intro below
 
-```
-~/.openclaw/workspace/agent-squad/
-├── squads/<name>/          ← Coordination (tasks, reports, logs)
-├── projects/<name>/        ← Code output (default, configurable)
-├── config.json             ← Global settings
-└── .archive/               ← Archived (deleted) squads
-```
+## Getting Started
 
-## Operations
+When users ask "what is this", "怎么用", "how do I use this", or invoke `/agent-squad` with no squads, give a friendly intro with examples. Match user's language.
 
-### 1. Start a Squad
+Chinese:
 
-When the user asks to start/create/launch/restart a squad, collect:
-- **Squad name** (required): lowercase alphanumeric with hyphens. Cannot be a reserved name (engine names, operation verbs, etc.). Good names combine project + role, e.g.: myapp-backend, acme-billing, dario-team, sam-frontend
-- **Engine** (required): which AI to use (claude, codex, gemini, opencode, kimi, trae, aider, goose)
-- **Project directory** (optional): where the squad writes code. Defaults to `~/.openclaw/workspace/agent-squad/projects/<name>/`, or the path set in config.json. Use `--project <dir>` to specify a custom path.
-- **Context** (optional): brief project background
-- **Agent Teams mode** (optional, claude only): enables Claude Code Agent Teams for multi-agent coordination. The coordinator can spawn sub-agents to work in parallel. Add `--agent-teams` flag.
+> Agent Squad 可以帮你在后台跑 AI 编程团队，7×24 小时自动写代码。你直接跟我说就行，比如：
+>
+> - "用 claude 起一个叫 backend 的 squad，项目在 ~/projects/api"
+> - "给 backend 一个任务：实现用户登录"
+> - "backend 进度怎么样了？"
+> - "停掉 backend"
+> - "我有哪些 squad 在跑？"
+>
+> 支持的引擎：Claude Code、Codex、Gemini CLI、OpenCode、Kimi、Trae、Aider、Goose
+>
+> 要不要现在就起一个试试？
 
-Then run:
+English:
 
-```bash
-bash scripts/squad-start.sh "<squad-name>" "<engine>" ["<optional-context>"] [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]
-```
+> Agent Squad runs AI coding agents in the background 24/7. Just tell me what you need:
+>
+> - "Start a squad called backend using claude for ~/projects/api"
+> - "Give backend a task: implement user login"
+> - "How's backend doing?"
+> - "Stop backend"
+> - "What squads do I have?"
+>
+> Engines: Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, Goose
+>
+> Want to start one now?
 
-**Flags:**
-- `--project <dir>`: project directory where the squad writes code.
-- `--restart`: reuse an existing squad's data (tasks, reports). Required if the squad name was used before.
-- `--agent-teams`: enable Claude Code Agent Teams mode (claude engine only).
-- `--no-watchdog`: skip watchdog cron registration. The squad will not auto-restart if it crashes.
+## What Users Can Do
 
-If the squad name already exists (from a previous run), the script will error and ask the user to either:
-- **Restart** the existing squad: add `--restart` flag
-- **Choose a new name**: pick a different squad name
+Users just talk. Here's what they might say and how to respond:
 
-**Environment checks** (automatic):
-- tmux and python3 must be installed
-- The chosen AI engine binary must be in PATH
-- Engine-specific checks: codex warns if project is not a git repo, gemini uses Google OAuth (run `gemini` once to login)
-- openclaw is checked for watchdog cron registration (optional — squad works without it but won't auto-recover)
+### Start a squad
 
-After success, respond with the squad name, engine, project directory, and coordination directory. Include how to assign tasks, check status, and stop.
+User: "用 codex 起一个叫 backend 的 squad" / "start a squad called api with claude for ~/projects/api"
 
-### 2. Assign a Task
+Ask if missing: squad name, engine. Project dir and context are optional.
 
-When the user wants to give a squad a task, collect:
-- **Squad name**: which squad
-- **Task title**: short name
-- **Objective**: what to do (be specific)
-- **Priority** (optional): critical, high, normal (default), low
+First-time users: briefly mention squads run in full-auto mode, AI has full access to the project directory.
 
-Write the task file and notify the squad:
+Response: "Squad 'backend' 已经跑起来了，用的是 Codex！随时可以给它派任务。"
 
-```bash
-bash scripts/squad-assign.sh "<squad-name>" "<title>" "<objective>" "<priority>"
-```
+### Assign a task
 
-If the user's description is vague, ask for clarification. Good tasks have:
-- Clear, specific objectives
-- A defined scope
-- Measurable acceptance criteria
+User: "给 backend 一个任务：做用户登录" / "let backend work on JWT auth"
 
-### 3. Check Status
+If only one squad exists, use it automatically. If the request is vague, ask for specifics.
 
-When the user asks about a squad's status, progress, or what it's doing:
+Response: "任务已派！backend 马上会开始做 'User Login'。"
 
-```bash
-bash scripts/squad-status.sh "<squad-name>"
-```
+### Check status
 
-Also read the latest report file in `~/.openclaw/workspace/agent-squad/squads/<squad-name>/reports/` for detailed progress. Look at the `## Current` section for real-time status.
+User: "backend 在干嘛？" / "进度如何" / "how's my squad doing?"
 
-Report the findings conversationally, e.g.:
-- "my-squad is running on Claude Code. It has 1 task in progress: building the login module. Currently at ~60%, working on OAuth integration."
-- "backend-team is stopped. It has 2 completed tasks and 1 pending."
+Response: "backend 正在用 Claude Code 跑，当前在做 'User Login'——正在写表单校验，大概 60%。已完成 2 个任务，1 个进行中。"
 
-### 4. Ping for Update
+### Ping for update
 
-When the user wants a squad to update its report immediately:
+User: "催一下 backend" / "let it report progress"
 
-```bash
-bash scripts/squad-ping.sh "<squad-name>"
-```
+Response: "已经催了 backend 更新进度，稍等一两分钟再看。"
 
-Tell the user: "I've asked <name> to update its report. Check back in a minute."
+### Stop a squad
 
-### 5. Stop a Squad
+User: "停掉 backend" / "stop the squad"
 
-When the user wants to stop a squad:
+Always confirm before stopping.
 
-```bash
-bash scripts/squad-stop.sh "<squad-name>"
-```
+Response: "backend 已停止。所有工作都保存了，随时可以重启。"
 
-Reassure the user: all task files, reports, and logs are preserved. The squad can be restarted later with `--restart`.
+### List squads
 
-### 6. Delete (Archive) a Squad
+User: "我有哪些 squad？" / "list my squads"
 
-When the user wants to delete/remove a squad that is already stopped:
+Response: present a clean readable summary of all squads.
 
-```bash
-bash scripts/squad-delete.sh "<squad-name>"
-```
+### Delete a squad
 
-This shows a summary first. To proceed:
+User: "删掉 backend" / "archive the old squad"
 
-```bash
-bash scripts/squad-delete.sh "<squad-name>" --confirm
-```
+Always ask for confirmation first. Reassure: data is archived, project code never touched.
 
-This moves the squad's coordination data to `.archive/` — nothing is permanently deleted. The project code directory is **never touched**.
+### Configure
 
-### 7. Configure Settings
+User: "把默认项目目录改成 ~/code" / "show squad settings"
 
-When the user wants to change the default project directory (e.g., "put all squad projects under ~/code", "change default project directory to ~/dev"):
+---
+
+## Script Reference
+
+All scripts at `{baseDir}/scripts/`. Execute scripts based on user intent above and present results conversationally.
+
+### squad-start.sh
 
 ```bash
-bash scripts/squad-config.sh set projects_dir "<path>"
+bash {baseDir}/scripts/squad-start.sh "<name>" "<engine>" "<context>" [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]
 ```
 
-To view current settings:
+Parameters:
+- name: lowercase alphanumeric + hyphens
+- engine: claude, codex, gemini, opencode, kimi, trae, aider, goose
+- context: optional project background
+- `--project <dir>`: custom code output directory
+- `--restart`: required if squad name already exists
+- `--agent-teams`: claude only, multi-agent mode
+- `--no-watchdog`: skip auto-restart cron
+
+### squad-assign.sh
 
 ```bash
-bash scripts/squad-config.sh show
+bash {baseDir}/scripts/squad-assign.sh "<name>" "<title>" "<objective>" "<priority>"
 ```
 
-Config is stored at `~/.openclaw/workspace/agent-squad/config.json`.
+Priority: critical / high / normal (default) / low
 
-### 8. List All Squads
-
-When the user asks to see all squads, or asks "what squads do I have":
+### squad-status.sh
 
 ```bash
-bash scripts/squad-list.sh
+bash {baseDir}/scripts/squad-status.sh "<name>"
 ```
 
-Present the output as a clean summary.
+Also read latest report in `~/.openclaw/workspace/agent-squad/squads/<name>/reports/` — check `## Current` section for real-time progress.
 
-## Guardrails
+### squad-ping.sh
 
-- **Delete is archive**: `squad-delete.sh` moves data to `.archive/`, never permanently deletes. Project code is never touched.
-- **Validate squad names**: lowercase alphanumeric + hyphens only.
-- **One engine per squad**. Users who want multiple engines should create multiple squads.
-- **Don't start duplicate squads**. Check if a tmux session already exists.
-- **Don't modify** task or report files — that's the coordinator's job. Only write to `tasks/pending/` when assigning.
-- If a squad is stopped and the user assigns a task, write the file anyway — it will be picked up on restart.
+```bash
+bash {baseDir}/scripts/squad-ping.sh "<name>"
+```
+
+### squad-stop.sh
+
+```bash
+bash {baseDir}/scripts/squad-stop.sh "<name>"
+```
+
+### squad-list.sh
+
+```bash
+bash {baseDir}/scripts/squad-list.sh
+```
+
+### squad-delete.sh
+
+```bash
+bash {baseDir}/scripts/squad-delete.sh "<name>"          # show summary
+bash {baseDir}/scripts/squad-delete.sh "<name>" --confirm # confirm delete
+```
+
+### squad-config.sh
+
+```bash
+bash {baseDir}/scripts/squad-config.sh show
+bash {baseDir}/scripts/squad-config.sh set projects_dir "<path>"
+```
+
+## Guidelines
+
+- If only one squad exists, use it automatically
+- One engine per squad — suggest multiple squads for multiple engines
+- Don't modify task/report files directly — only via assign script
+- If squad is stopped and user assigns a task, write it anyway — picked up on restart
+- Squads auto-init git repos; for existing projects suggest a separate branch
+- Watchdog auto-restarts crashed squads by default
 
 ## Engine Reference
 
-For supported engines and their configurations, see `references/engines.md`.
-
-## Security
-
-- Squads run AI engines in **full-auto mode** — this means the AI operates without any permission prompts and can freely read, write, delete files, and execute commands within the project directory. This is required for unattended background operation. Users should understand this grants the AI full autonomy over the project.
-- **Keep sensitive files out**: credentials, API keys, `.env` files, and private keys should not be in project directories that squads work on.
-- **Git safety**: if git is installed, the squad auto-initializes a git repo and the coordinator commits frequently. For existing projects, consider using a **separate branch or git worktree** so squad commits don't mix with your main history.
-- **Watchdog**: by default a cron job auto-restarts crashed squads every 5 minutes. Use `--no-watchdog` if you prefer manual control.
-- Coordination directory logs are gitignored by default.
-- Each squad runs in its own isolated tmux session.
-- For maximum safety, consider running squads in an **isolated environment** (separate user account, container, or VM) to limit blast radius.
-- The `--agent-teams` flag (Claude only) allows the coordinator to spawn additional AI sub-agents, increasing the scope of autonomous operations.
+Details: `{baseDir}/references/engines.md`
