@@ -29,8 +29,7 @@ fi
 
 # --- Refuse to delete running squad ---
 if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
-  echo "ERROR: Squad '$SQUAD_NAME' is still running. Stop it first:"
-  echo "  squad-stop.sh $SQUAD_NAME"
+  echo "ERROR: Squad '$SQUAD_NAME' is still running. Stop it first, e.g.: \"Stop $SQUAD_NAME\""
   exit 1
 fi
 
@@ -63,7 +62,7 @@ if [ "$CONFIRM" != "--confirm" ]; then
   echo ""
   echo "Project code at '${PROJECT_DIR}' will NOT be touched."
   echo ""
-  echo "To proceed, run: squad-delete.sh $SQUAD_NAME --confirm"
+  echo "To proceed, confirm: \"Yes, delete $SQUAD_NAME\""
   exit 0
 fi
 

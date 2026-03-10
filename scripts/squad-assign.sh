@@ -20,7 +20,7 @@ TMUX_SESSION="squad-${SQUAD_NAME}"
 
 # --- Check squad exists ---
 if [ ! -d "$SQUAD_DIR" ]; then
-  echo "ERROR: Squad '$SQUAD_NAME' not found. Start it first with squad-start.sh."
+  echo "ERROR: Squad '$SQUAD_NAME' not found. Start it first, e.g.: \"Start a squad called $SQUAD_NAME using claude\""
   exit 1
 fi
 

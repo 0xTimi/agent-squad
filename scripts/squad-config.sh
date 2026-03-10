@@ -68,7 +68,7 @@ with open(config_file, 'w') as f:
     ;;
 
   *)
-    echo "Usage: squad-config.sh show | set <key> <value>"
+    echo "Usage: \"Show squad settings\" or \"Set default project dir to ~/code\""
     exit 1
     ;;
 esac

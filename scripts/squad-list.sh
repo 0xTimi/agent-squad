@@ -8,7 +8,7 @@ SQUADS_DIR="${HOME}/.openclaw/workspace/agent-squad/squads"
 
 # --- Check squads directory ---
 if [ ! -d "$SQUADS_DIR" ]; then
-  echo "No squads found. Start one with squad-start.sh."
+  echo "No squads found. Try: \"Start a squad called my-squad using claude\" or \"/agent-squad start my-squad claude\""
   exit 0
 fi
 
@@ -50,5 +50,5 @@ for squad_dir in "$SQUADS_DIR"/*/; do
 done
 
 if [ "$SQUAD_COUNT" -eq 0 ]; then
-  echo "No squads found. Start one with squad-start.sh."
+  echo "No squads found. Try: \"Start a squad called my-squad using claude\" or \"/agent-squad start my-squad claude\""
 fi

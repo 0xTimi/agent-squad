@@ -184,10 +184,10 @@ if [ -d "$SQUAD_DIR" ]; then
     fi
     echo "Restarting squad '$SQUAD_NAME' with existing data."
   else
-    echo "ERROR: Squad '$SQUAD_NAME' already exists at $SQUAD_DIR"
+    echo "ERROR: Squad '$SQUAD_NAME' already exists."
     echo ""
-    echo "  To restart it with existing data:  add --restart flag"
-    echo "  To create a fresh squad:           pick a different name"
+    echo "  To restart it: \"Restart $SQUAD_NAME\""
+    echo "  To create a new one: pick a different name"
     exit 1
   fi
 fi
