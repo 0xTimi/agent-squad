@@ -1,6 +1,6 @@
 ---
 name: agent-squad
-description: "Manage persistent AI coding squads that run in tmux sessions with task queues, progress reports, and automatic health monitoring. Use when the user wants to: (1) start/launch/create a squad or team of AI agents, (2) assign/give tasks to a squad, (3) check squad status or ask what a squad is doing, (4) ping/nudge a squad to report progress, (5) stop a squad, (6) list all active squads. Supports Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, and Goose as AI engines."
+description: "Manage persistent AI coding squads that run in tmux sessions with task queues, progress reports, and automatic health monitoring. Use when the user wants to: (1) start/launch/create a squad or team of AI agents, (2) assign/give tasks to a squad, (3) check squad status or ask what a squad is doing, (4) ping/nudge a squad to report progress, (5) stop a squad, (6) list all active squads, (7) configure squad settings like default project directory. Supports Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, and Goose as AI engines."
 metadata:
   { "openclaw": { "requires": { "anyBins": ["tmux"] } } }
 ---
@@ -115,7 +115,23 @@ bash scripts/squad-stop.sh "<squad-name>"
 
 Reassure the user: all task files, reports, and logs are preserved. The squad can be restarted later.
 
-### 6. List All Squads
+### 6. Configure Settings
+
+When the user wants to change the default project directory (e.g., "put all squad projects under ~/code", "change default project directory to ~/dev"):
+
+```bash
+bash scripts/squad-config.sh set projects_dir "<path>"
+```
+
+To view current settings:
+
+```bash
+bash scripts/squad-config.sh show
+```
+
+Config is stored at `~/.openclaw/workspace/agent-squad/config.json`.
+
+### 7. List All Squads
 
 When the user asks to see all squads, or asks "what squads do I have":
 

@@ -28,9 +28,17 @@ while [ $i -lt ${#args[@]} ]; do
   i=$((i + 1))
 done
 
-# Default project dir
+# Default project dir (read from config or use built-in default)
 if [ -z "$PROJECT_DIR" ]; then
-  PROJECT_DIR="${BASE_DIR}/projects/${SQUAD_NAME}"
+  CONFIGURED_DIR=""
+  if [ -f "${BASE_DIR}/config.json" ]; then
+    CONFIGURED_DIR=$(python3 -c "import json; print(json.load(open('${BASE_DIR}/config.json')).get('projects_dir', ''))" 2>/dev/null || echo "")
+  fi
+  if [ -n "$CONFIGURED_DIR" ]; then
+    PROJECT_DIR="${CONFIGURED_DIR}/${SQUAD_NAME}"
+  else
+    PROJECT_DIR="${BASE_DIR}/projects/${SQUAD_NAME}"
+  fi
 fi
 
 TMUX_SESSION="squad-${SQUAD_NAME}"
