@@ -107,6 +107,17 @@ If your engine supports querying token usage (e.g., `/usage` for Claude Code, `/
 2. **Each time you update your report** — Check usage again and update "Current" and "Consumed" in the report.
 3. **When completing a task** — Record the total tokens consumed in ## Result.
 
+## Git Rules (Mandatory)
+
+If the project directory is a git repo (check with `git rev-parse --is-inside-work-tree`):
+
+1. **Commit after every meaningful change** — each completed function, fix, or logical step gets its own commit.
+2. **Write clear commit messages** — describe what changed and why.
+3. **Never force-push or rewrite history** — only append commits.
+4. **Commit before switching tasks** — always leave the working tree clean.
+
+This ensures the user can review, revert, or cherry-pick any change the squad makes.
+
 ## File Rules
 
 - One task per file. Never delete tasks — move to `done/`.

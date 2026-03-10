@@ -9,13 +9,7 @@ SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 BASE_DIR="${HOME}/.openclaw/workspace/agent-squad"
 SQUADS_DIR="${BASE_DIR}/squads"
 
-# --- Check python3 is available (needed for JSON handling) ---
-if ! command -v python3 &>/dev/null; then
-  echo "ERROR: python3 is required but not found in PATH."
-  exit 1
-fi
-
-# --- Args ---
+# --- Args (python3 not needed yet) ---
 SQUAD_NAME="${1:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]}"
 ENGINE="${2:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]}"
 CONTEXT=""
@@ -34,48 +28,17 @@ while [ $i -lt ${#args[@]} ]; do
   i=$((i + 1))
 done
 
-# Default project dir (read from config or use built-in default)
-if [ -z "$PROJECT_DIR" ]; then
-  CONFIGURED_DIR=""
-  if [ -f "${BASE_DIR}/config.json" ]; then
-    CONFIGURED_DIR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('projects_dir', ''))" "${BASE_DIR}/config.json" 2>/dev/null || echo "")
-  fi
-  if [ -n "$CONFIGURED_DIR" ]; then
-    PROJECT_DIR="${CONFIGURED_DIR}/${SQUAD_NAME}"
-  else
-    PROJECT_DIR="${BASE_DIR}/projects/${SQUAD_NAME}"
-  fi
-fi
-
-TMUX_SESSION="squad-${SQUAD_NAME}"
-SQUAD_DIR="${SQUADS_DIR}/${SQUAD_NAME}"
-
 # --- Validate squad name (lowercase alphanumeric + hyphens) ---
 if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
   echo "ERROR: Squad name must be lowercase alphanumeric with hyphens (e.g., 'my-squad')"
   exit 1
 fi
 
-# --- Check tmux is available ---
-if ! command -v tmux &>/dev/null; then
-  echo "ERROR: tmux is not installed. Install it with: brew install tmux (macOS) or apt install tmux (Linux)"
+# --- Validate --agent-teams flag ---
+if [ "$AGENT_TEAMS" = true ] && [ "$ENGINE" != "claude" ]; then
+  echo "ERROR: --agent-teams is only supported with the claude engine."
   exit 1
 fi
-
-# --- Check openclaw is available (needed for watchdog cron) ---
-if ! command -v openclaw &>/dev/null; then
-  echo "WARNING: openclaw not found in PATH. Watchdog cron will not be registered."
-  echo "         The squad will still run, but won't auto-recover if it crashes."
-  OPENCLAW_AVAILABLE=false
-else
-  OPENCLAW_AVAILABLE=true
-fi
-
-# --- Validate / create project directory ---
-if [ ! -d "$PROJECT_DIR" ]; then
-  mkdir -p "$PROJECT_DIR"
-fi
-PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
 
 # --- Resolve engine command ---
 get_engine_command() {
@@ -101,31 +64,96 @@ if [ -z "$ENGINE_CMD" ]; then
   exit 1
 fi
 
-# --- Check engine binary exists ---
+# --- Environment check: collect all issues, report together ---
+ERRORS=()
+WARNINGS=()
+
+if ! command -v python3 &>/dev/null; then
+  ERRORS+=("python3 is required but not found. Install: https://www.python.org/downloads/")
+fi
+
+if ! command -v tmux &>/dev/null; then
+  ERRORS+=("tmux is required but not found. Install: brew install tmux (macOS) or apt install tmux (Linux)")
+fi
+
 if ! command -v "$ENGINE_BIN" &>/dev/null; then
-  echo "ERROR: '$ENGINE_BIN' not found in PATH. Please install it first."
+  ERRORS+=("'$ENGINE_BIN' (engine: $ENGINE) is not found in PATH. Please install it first.")
+fi
+
+if ! command -v git &>/dev/null; then
+  WARNINGS+=("git is not installed. Code changes won't be version-controlled — consider installing git for safety backups.")
+fi
+
+if ! command -v openclaw &>/dev/null; then
+  WARNINGS+=("openclaw not found. Watchdog cron won't be registered — the squad will run but won't auto-recover from crashes.")
+fi
+
+# Report warnings first, then errors
+if [ ${#WARNINGS[@]} -gt 0 ]; then
+  echo ""
+  for w in "${WARNINGS[@]}"; do
+    echo "WARNING: $w"
+  done
+fi
+
+if [ ${#ERRORS[@]} -gt 0 ]; then
+  echo ""
+  for e in "${ERRORS[@]}"; do
+    echo "ERROR: $e"
+  done
+  echo ""
+  echo "Fix the errors above before starting a squad."
   exit 1
+fi
+
+OPENCLAW_AVAILABLE=true
+command -v openclaw &>/dev/null || OPENCLAW_AVAILABLE=false
+
+# --- Default project dir (read from config or use built-in default) ---
+if [ -z "$PROJECT_DIR" ]; then
+  CONFIGURED_DIR=""
+  if [ -f "${BASE_DIR}/config.json" ]; then
+    CONFIGURED_DIR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('projects_dir', ''))" "${BASE_DIR}/config.json" 2>/dev/null || echo "")
+  fi
+  if [ -n "$CONFIGURED_DIR" ]; then
+    PROJECT_DIR="${CONFIGURED_DIR}/${SQUAD_NAME}"
+  else
+    PROJECT_DIR="${BASE_DIR}/projects/${SQUAD_NAME}"
+  fi
+fi
+
+TMUX_SESSION="squad-${SQUAD_NAME}"
+SQUAD_DIR="${SQUADS_DIR}/${SQUAD_NAME}"
+
+# --- Validate / create project directory ---
+if [ ! -d "$PROJECT_DIR" ]; then
+  mkdir -p "$PROJECT_DIR"
+fi
+PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
+
+# --- Initialize git if available ---
+if command -v git &>/dev/null; then
+  if ! git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+    git -C "$PROJECT_DIR" init -q
+    git -C "$PROJECT_DIR" add -A 2>/dev/null || true
+    git -C "$PROJECT_DIR" commit -q -m "initial commit (before squad)" --allow-empty 2>/dev/null || true
+    GIT_INITIALIZED=true
+  else
+    GIT_INITIALIZED=already
+  fi
+else
+  GIT_INITIALIZED=false
 fi
 
 # --- Engine-specific validation ---
 case "$ENGINE" in
   codex)
-    if [ ! -d "$PROJECT_DIR/.git" ]; then
+    if ! git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree &>/dev/null 2>&1; then
       echo "WARNING: codex requires a git repository. '$PROJECT_DIR' is not a git repo."
       echo "         Run 'git init' in the project directory first, or codex may fail."
     fi
     ;;
-  gemini)
-    # Gemini CLI authenticates via Google OAuth (browser login), same as Claude Code and Codex.
-    # No API key needed. Run `gemini` once to complete the login flow before starting a squad.
-    ;;
 esac
-
-# --- Validate --agent-teams flag ---
-if [ "$AGENT_TEAMS" = true ] && [ "$ENGINE" != "claude" ]; then
-  echo "ERROR: --agent-teams is only supported with the claude engine."
-  exit 1
-fi
 
 # --- Check for existing squad ---
 if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
@@ -260,6 +288,13 @@ if [ "$AGENT_TEAMS" = true ]; then
   echo "  Mode:        agent-teams (multi-agent coordination)"
 fi
 echo "  Project:     ${PROJECT_DIR}"
+if [ "$GIT_INITIALIZED" = true ]; then
+  echo "  Git:         initialized (safety backup enabled)"
+elif [ "$GIT_INITIALIZED" = already ]; then
+  echo "  Git:         already initialized"
+else
+  echo "  Git:         not installed (no automatic backup — consider installing git)"
+fi
 echo "  Squad data:  ${SQUAD_DIR}"
 echo "  tmux:        tmux attach -t ${TMUX_SESSION}  (Ctrl+B D to detach)"
 if [ "$OPENCLAW_AVAILABLE" = true ]; then
