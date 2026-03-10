@@ -34,6 +34,19 @@ if [[ ! "$SQUAD_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
   exit 1
 fi
 
+# --- Reject reserved names as squad names (causes confusion with OpenClaw) ---
+RESERVED_NAMES="claude codex gemini opencode kimi trae aider goose start stop status ping delete assign list squad task report watchdog openclaw skill cron"
+for reserved in $RESERVED_NAMES; do
+  if [ "$SQUAD_NAME" = "$reserved" ]; then
+    echo "ERROR: '$SQUAD_NAME' is a reserved name and cannot be used as a squad name."
+    echo ""
+    echo "  Pick a name that combines your project and role, so it's"
+    echo "  easy to tell squads apart, e.g.:"
+    echo "    myapp-backend, acme-billing, dario-team, sam-frontend"
+    exit 1
+  fi
+done
+
 # --- Validate --agent-teams flag ---
 if [ "$AGENT_TEAMS" = true ] && [ "$ENGINE" != "claude" ]; then
   echo "ERROR: --agent-teams is only supported with the claude engine."

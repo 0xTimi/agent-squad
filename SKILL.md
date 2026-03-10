@@ -34,7 +34,7 @@ Squads store data separately from project code:
 ### 1. Start a Squad
 
 When the user asks to start/create/launch/restart a squad, collect:
-- **Squad name** (required): lowercase alphanumeric with hyphens
+- **Squad name** (required): lowercase alphanumeric with hyphens. Cannot be a reserved name (engine names, operation verbs, etc.). Good names combine project + role, e.g.: myapp-backend, acme-billing, dario-team, sam-frontend
 - **Engine** (required): which AI to use (claude, codex, gemini, opencode, kimi, trae, aider, goose)
 - **Project directory** (optional): where the squad writes code. Defaults to `~/.openclaw/workspace/agent-squad/projects/<name>/`, or the path set in config.json. Use `--project <dir>` to specify a custom path.
 - **Context** (optional): brief project background
