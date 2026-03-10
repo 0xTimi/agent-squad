@@ -27,6 +27,7 @@ Users can invoke `/agent-squad` directly with optional arguments:
 | `/agent-squad assign my-squad "add login page"` | Assign a task |
 | `/agent-squad ping my-squad` | Nudge squad to report |
 | `/agent-squad delete my-squad` | Archive a squad |
+| `/agent-squad peek my-squad` | Peek at squad's live tmux screen |
 | `/agent-squad restart my-squad` | Restart a stopped squad |
 
 No arguments or `list` → run `bash {baseDir}/scripts/squad-list.sh`:
@@ -77,7 +78,24 @@ Response: "Task assigned! my-squad will start working on 'Login Page' shortly."
 
 User: "how's my-squad doing?" / "what's the status?" / "is my-squad done yet?"
 
-Response: "my-squad is running on Claude Code, working on 'Login Page' — implementing form validation, about 60% done. 2 tasks completed, 1 in progress."
+Include the live tmux screen output (from squad-status.sh) in the response — this lets the user see what the agent is actually doing right now.
+
+Response: "my-squad is running on Claude Code, working on 'Login Page' — about 60% done. 2 tasks completed, 1 in progress.
+
+Live screen:
+```
+Working on form validation...
+Created src/components/LoginForm.tsx
+Running tests...
+```"
+
+### Peek at screen
+
+User: "peek at my-squad" / "what's on my-squad's screen?" / "show me what my-squad is doing"
+
+Show the raw tmux screen content. This is a quick way to see the agent's live terminal without checking reports.
+
+Response: Show the screen output directly, formatted in a code block.
 
 ### Ping for update
 
@@ -115,6 +133,26 @@ Always ask for confirmation first. Reassure: data is archived, project code is n
 
 User: "set default project dir to ~/code" / "show squad settings"
 
+### What commands are available?
+
+User: "agent-squad都有哪些命令" / "what can you do?" / "help"
+
+**IMPORTANT**: Never show internal script names (squad-start.sh, etc.) to users. Instead, show the `/agent-squad` slash commands and natural language examples:
+
+> Here's what you can do with Agent Squad:
+>
+> | Command | Or just say... |
+> |---|---|
+> | `/agent-squad start my-squad claude` | "Start a squad called my-squad" |
+> | `/agent-squad assign my-squad "task"` | "Give my-squad a task: ..." |
+> | `/agent-squad status my-squad` | "How's my-squad doing?" |
+> | `/agent-squad peek my-squad` | "Peek at my-squad's screen" |
+> | `/agent-squad ping my-squad` | "Ping my-squad" |
+> | `/agent-squad stop my-squad` | "Stop my-squad" |
+> | `/agent-squad restart my-squad` | "Restart my-squad" |
+> | `/agent-squad list` | "What squads do I have?" |
+> | `/agent-squad delete my-squad` | "Delete my-squad" |
+
 ---
 
 ## Script Reference
@@ -151,6 +189,14 @@ bash {baseDir}/scripts/squad-status.sh "<name>"
 
 Also read latest report in `~/.openclaw/workspace/agent-squad/squads/<name>/reports/` — check `## Current` section for real-time progress.
 
+### squad-peek.sh
+
+```bash
+bash {baseDir}/scripts/squad-peek.sh "<name>" [lines]
+```
+
+Default: 20 lines. Shows the live tmux screen content of a running squad.
+
 ### squad-ping.sh
 
 ```bash
@@ -185,6 +231,7 @@ bash {baseDir}/scripts/squad-config.sh set projects_dir "<path>"
 
 ## Guidelines
 
+- **Never show internal script names** (squad-start.sh, etc.) to users — always use `/agent-squad` slash commands or natural language examples
 - If only one squad exists, use it automatically — don't ask "which squad?"
 - One engine per squad — suggest multiple squads for multiple engines
 - Don't modify task/report files directly — only via assign script
