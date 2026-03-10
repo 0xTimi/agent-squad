@@ -1,5 +1,5 @@
 #!/bin/bash
-# squad-status.sh — Check squad status
+# squad-status.sh — Check squad status, peek at screen, nudge if needed
 # Usage: squad-status.sh <squad-name>
 
 set -euo pipefail
@@ -43,9 +43,7 @@ DONE=$(count_files "$SQUAD_DIR/tasks/done")
 CURRENT_REPORT=""
 for report in "$SQUAD_DIR"/reports/task-*.md; do
   [ -f "$report" ] || continue
-  # Check if report has "in-progress" status
   if grep -qi "in-progress" "$report" 2>/dev/null; then
-    # Extract ## Current section
     CURRENT_SECTION=$(sed -n '/^## Current/,/^## /{ /^## Current/d; /^## /d; p; }' "$report" 2>/dev/null | head -5) || true
     if [ -n "$CURRENT_SECTION" ]; then
       REPORT_NAME=$(basename "$report")
@@ -70,6 +68,16 @@ if [ -n "$CURRENT_REPORT" ]; then
   echo "$CURRENT_REPORT"
 fi
 
+# --- Peek at live screen (if running) ---
+if [ "$TMUX_STATUS" = "running" ]; then
+  SCREEN_OUTPUT=$(tmux capture-pane -t "$TMUX_SESSION" -p 2>/dev/null | sed '/^$/d' | tail -5) || true
+  if [ -n "$SCREEN_OUTPUT" ]; then
+    echo ""
+    echo "Live screen (last 5 lines):"
+    echo "$SCREEN_OUTPUT" | sed 's/^/  /'
+  fi
+fi
+
 # --- Check for blocked tasks ---
 for report in "$SQUAD_DIR"/reports/task-*.md; do
   [ -f "$report" ] || continue
@@ -78,3 +86,15 @@ for report in "$SQUAD_DIR"/reports/task-*.md; do
     echo "WARNING: $(basename "$report") has a ## Blocked section!"
   fi
 done
+
+# --- Nudge: remind to keep working if tasks remain ---
+if [ "$TMUX_STATUS" = "running" ]; then
+  REMAINING=$((PENDING + IN_PROGRESS))
+  if [ "$REMAINING" -gt 0 ]; then
+    {
+      tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
+      sleep 0.5
+      tmux send-keys -t "$TMUX_SESSION" "You have ${REMAINING} task(s) remaining (${PENDING} pending, ${IN_PROGRESS} in-progress). Keep working — do not stop until all tasks are done. Update your report with current progress." Enter
+    } 2>/dev/null || true
+  fi
+fi

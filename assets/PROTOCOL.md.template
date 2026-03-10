@@ -81,8 +81,13 @@ Append one line for each meaningful progress event:
 | Time | Hash | Message |
 |------|------|---------|
 
+## Token Usage
+Start: <tokens at task start>
+Current: <tokens now>
+Consumed: <difference>
+
 ## Result
-(filled on completion: summary, PRs, metrics)
+(filled on completion: summary, PRs, metrics, total tokens consumed)
 ```
 
 ## Reporting Rules (Mandatory)
@@ -94,6 +99,13 @@ Append one line for each meaningful progress event:
 5. **Completed** -> Fill Result, set Status: done, move task to done/
 
 The ## Current section must always reflect your real-time state. Anyone checking your report should instantly understand what you are doing.
+
+## Token Usage Tracking
+
+If your engine supports querying token usage (e.g., `/usage` for Claude Code, `/status` for Codex, `/stats` for Gemini/Goose, `/tokens` for Aider, `/usage` for Kimi), you should:
+1. **When starting a task** — Check your current token usage and record it in the report under ## Token Usage as the "Start" value.
+2. **Each time you update your report** — Check usage again and update "Current" and "Consumed" in the report.
+3. **When completing a task** — Record the total tokens consumed in ## Result.
 
 ## File Rules
 
