@@ -6,7 +6,7 @@ set -euo pipefail
 
 SQUAD_NAME="${1:?Usage: squad-stop.sh <squad-name>}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
-SQUAD_DIR="${HOME}/.openclaw/workspace/squads/${SQUAD_NAME}"
+SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 CRON_NAME="squad-watchdog-${SQUAD_NAME}"
 
 # --- Kill tmux session ---

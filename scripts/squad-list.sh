@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-SQUADS_DIR="${HOME}/.openclaw/workspace/squads"
+SQUADS_DIR="${HOME}/.openclaw/workspace/agent-squad/squads"
 
 # --- Check squads directory ---
 if [ ! -d "$SQUADS_DIR" ]; then

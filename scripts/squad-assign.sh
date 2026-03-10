@@ -1,16 +1,15 @@
 #!/bin/bash
 # squad-assign.sh — Assign a task to a squad
-# Usage: squad-assign.sh <squad-name> <task-title> <objective> [target-path] [priority]
+# Usage: squad-assign.sh <squad-name> <task-title> <objective> [priority]
 
 set -euo pipefail
 
-SQUAD_NAME="${1:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [target-path] [priority]}"
-TASK_TITLE="${2:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [target-path] [priority]}"
-OBJECTIVE="${3:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [target-path] [priority]}"
-TARGET="${4:-}"
-PRIORITY="${5:-normal}"
+SQUAD_NAME="${1:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [priority]}"
+TASK_TITLE="${2:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [priority]}"
+OBJECTIVE="${3:?Usage: squad-assign.sh <squad-name> <task-title> <objective> [priority]}"
+PRIORITY="${4:-normal}"
 
-SQUAD_DIR="${HOME}/.openclaw/workspace/squads/${SQUAD_NAME}"
+SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 
 # --- Check squad exists ---
@@ -47,9 +46,6 @@ Assigned by user via agent-squad.
 ## Objective
 ${OBJECTIVE}
 
-## Target
-${TARGET:-Not specified}
-
 ## Acceptance Criteria
 - [ ] Objective completed as described
 - [ ] All changes committed and pushed
@@ -65,7 +61,7 @@ mv "$TMP_PATH" "$TASK_PATH"
 if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
   tmux send-keys -t "$TMUX_SESSION" Escape 2>/dev/null || true
   sleep 1
-  tmux send-keys -t "$TMUX_SESSION" "New task assigned: check tasks/pending/${TASK_FILE} and start working on it." Enter
+  tmux send-keys -t "$TMUX_SESSION" "New task assigned: check ${SQUAD_DIR}/tasks/pending/${TASK_FILE} and start working on it." Enter
   echo "Task assigned and squad notified."
 else
   echo "Task assigned. Squad is not currently running — it will pick up the task when restarted."

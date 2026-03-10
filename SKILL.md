@@ -22,20 +22,37 @@ Run persistent AI development squads in tmux sessions. Each squad has a coordina
 When the user asks to start/create/launch a squad, collect:
 - **Squad name** (required): lowercase alphanumeric with hyphens
 - **Engine** (required): which AI to use (claude, codex, gemini, opencode, kimi, trae, aider, goose)
+- **Project directory** (optional): where the code lives. Defaults to the user's current working directory. Use `--project <dir>` to specify.
 - **Context** (optional): brief project background
+- **Agent Teams mode** (optional, claude only): if the user wants multi-agent coordination via Claude Code Agent Teams, add `--agent-teams`. This uses subagent spawning for parallel work. Only available with the claude engine.
 
 Then run:
 
 ```bash
-bash scripts/squad-start.sh "<squad-name>" "<engine>" "<optional-context>"
+bash scripts/squad-start.sh "<squad-name>" "<engine>" ["<optional-context>"] [--project <dir>] [--restart] [--agent-teams]
 ```
+
+**Flags:**
+- `--project <dir>`: project directory where the squad writes code. Defaults to current working directory.
+- `--restart`: reuse an existing squad's data (tasks, reports). Required if the squad name was used before.
+- `--agent-teams`: enable Claude Code Agent Teams mode (claude engine only). The coordinator can spawn sub-agents for parallel work.
+
+If the squad name already exists (from a previous run), the script will error and ask the user to either:
+- **Restart** the existing squad: add `--restart` flag
+- **Choose a new name**: pick a different squad name
+
+**Environment checks** (automatic):
+- tmux must be installed
+- The chosen AI engine binary must be in PATH
+- openclaw is checked for watchdog cron registration (optional — squad works without it but won't auto-recover)
 
 After success, respond with:
 
 ```
 Squad "<name>" started (<engine>).
 
-Coordination directory: ~/.openclaw/workspace/squads/<name>/
+Coordination directory: ~/.openclaw/workspace/agent-squad/squads/<name>/
+Project directory: ~/.openclaw/workspace/agent-squad/projects/<name>/ (default, or user-specified)
 Live view: tmux attach -t squad-<name>  (Ctrl+B D to detach)
 
 You can now:
@@ -51,13 +68,12 @@ When the user wants to give a squad a task, collect:
 - **Squad name**: which squad
 - **Task title**: short name
 - **Objective**: what to do (be specific)
-- **Target path** (optional): project directory
 - **Priority** (optional): critical, high, normal (default), low
 
 Write the task file and notify the squad:
 
 ```bash
-bash scripts/squad-assign.sh "<squad-name>" "<title>" "<objective>" "<target-path>" "<priority>"
+bash scripts/squad-assign.sh "<squad-name>" "<title>" "<objective>" "<priority>"
 ```
 
 If the user's description is vague, ask for clarification. Good tasks have:
@@ -73,7 +89,7 @@ When the user asks about a squad's status, progress, or what it's doing:
 bash scripts/squad-status.sh "<squad-name>"
 ```
 
-Also read the latest report file in `~/.openclaw/workspace/squads/<squad-name>/reports/` for detailed progress. Look at the `## Current` section for real-time status.
+Also read the latest report file in `~/.openclaw/workspace/agent-squad/squads/<squad-name>/reports/` for detailed progress. Look at the `## Current` section for real-time status.
 
 Report the findings conversationally, e.g.:
 - "xiaopang is running on Claude Code. It has 1 task in progress: building the login module. Currently at ~60%, working on OAuth integration."

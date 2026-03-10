@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SQUAD_NAME="${1:?Usage: squad-status.sh <squad-name>}"
-SQUAD_DIR="${HOME}/.openclaw/workspace/squads/${SQUAD_NAME}"
+SQUAD_DIR="${HOME}/.openclaw/workspace/agent-squad/squads/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
 
 # --- Check squad exists ---

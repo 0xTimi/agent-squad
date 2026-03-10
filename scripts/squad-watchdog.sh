@@ -7,7 +7,7 @@ set -euo pipefail
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:${HOME}/.local/bin:$PATH"
 
-SQUADS_DIR="${HOME}/.openclaw/workspace/squads"
+SQUADS_DIR="${HOME}/.openclaw/workspace/agent-squad/squads"
 SQUAD_NAME="${1:?Usage: squad-watchdog.sh <squad-name>}"
 SQUAD_DIR="${SQUADS_DIR}/${SQUAD_NAME}"
 TMUX_SESSION="squad-${SQUAD_NAME}"
@@ -25,10 +25,22 @@ if [ ! -f "$SQUAD_DIR/squad.json" ]; then
   exit 1
 fi
 
-ENGINE_CMD=$(python3 -c "import json; print(json.load(open('$SQUAD_DIR/squad.json'))['engine_command'])" 2>/dev/null)
+SQUAD_JSON="$SQUAD_DIR/squad.json"
+ENGINE_CMD=$(python3 -c "import json; print(json.load(open('$SQUAD_JSON'))['engine_command'])" 2>/dev/null)
 if [ -z "$ENGINE_CMD" ]; then
   echo "ERROR: Could not read engine_command from squad.json"
   exit 1
+fi
+
+PROJECT_DIR=$(python3 -c "import json; print(json.load(open('$SQUAD_JSON')).get('project_dir', ''))" 2>/dev/null)
+if [ -z "$PROJECT_DIR" ] || [ ! -d "$PROJECT_DIR" ]; then
+  PROJECT_DIR="$SQUAD_DIR"
+fi
+
+AGENT_TEAMS=$(python3 -c "import json; print(json.load(open('$SQUAD_JSON')).get('agent_teams', False))" 2>/dev/null)
+TMUX_ENV="SQUAD_DIR=${SQUAD_DIR}"
+if [ "$AGENT_TEAMS" = "True" ]; then
+  TMUX_ENV="$TMUX_ENV CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
 fi
 
 # --- Check tmux session ---
@@ -46,9 +58,9 @@ if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
 
   # tmux session exists but engine has exited — restart engine inside existing session
   echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] Engine exited in session $TMUX_SESSION. Restarting..." >> "$LOG_FILE"
-  tmux send-keys -t "$TMUX_SESSION" "$ENGINE_CMD" Enter
+  tmux send-keys -t "$TMUX_SESSION" "$TMUX_ENV $ENGINE_CMD" Enter
   sleep 5
-  tmux send-keys -t "$TMUX_SESSION" "You are ${SQUAD_NAME}, a persistent development coordinator. Read PROTOCOL.md for your full instructions. Read logs/coordinator-summary.md if it exists to resume from where you left off. Then check tasks/pending/ and tasks/in-progress/. Continue working." Enter
+  tmux send-keys -t "$TMUX_SESSION" "You are ${SQUAD_NAME}, a persistent development coordinator. Your coordination directory is ${SQUAD_DIR} — read ${SQUAD_DIR}/PROTOCOL.md for your full instructions. Read ${SQUAD_DIR}/logs/coordinator-summary.md if it exists to resume. Check ${SQUAD_DIR}/tasks/pending/ and ${SQUAD_DIR}/tasks/in-progress/. Write code in ${PROJECT_DIR}. Continue working." Enter
   echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] Engine restarted in existing session." >> "$LOG_FILE"
   echo "RESTARTED: Engine was dead inside tmux session. Restarted."
   exit 0
@@ -57,11 +69,11 @@ fi
 # --- tmux session does not exist — full restart ---
 echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] Session $TMUX_SESSION not found. Full restart..." >> "$LOG_FILE"
 
-tmux new-session -d -s "$TMUX_SESSION" -c "$SQUAD_DIR" "$ENGINE_CMD"
+tmux new-session -d -s "$TMUX_SESSION" -c "$PROJECT_DIR" "$TMUX_ENV $ENGINE_CMD"
 
 {
   sleep 5
-  tmux send-keys -t "$TMUX_SESSION" "You are ${SQUAD_NAME}, a persistent development coordinator. Read PROTOCOL.md for your full instructions. Read logs/coordinator-summary.md if it exists to resume from where you left off. Then check tasks/pending/ and tasks/in-progress/. Continue working." Enter
+  tmux send-keys -t "$TMUX_SESSION" "You are ${SQUAD_NAME}, a persistent development coordinator. Your coordination directory is ${SQUAD_DIR} — read ${SQUAD_DIR}/PROTOCOL.md for your full instructions. Read ${SQUAD_DIR}/logs/coordinator-summary.md if it exists to resume. Check ${SQUAD_DIR}/tasks/pending/ and ${SQUAD_DIR}/tasks/in-progress/. Write code in ${PROJECT_DIR}. Continue working." Enter
 } &
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] Full restart completed." >> "$LOG_FILE"
