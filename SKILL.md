@@ -49,7 +49,7 @@ When users ask "what is this", "how do I use this", or invoke `/agent-squad` wit
 >
 > Want to start one now?
 
-If the user asks which engine to use: Claude Code and Codex are recommended for most coding tasks. Gemini CLI is a good free alternative. See `{baseDir}/references/engines.md` for details.
+If the user asks which engine to use or doesn't specify one: **default to `claude`** — it is the most thoroughly tested engine and works best with Agent Squad. Mention other engines only if the user specifically asks. See `{baseDir}/references/engines.md` for details.
 
 ## What Users Can Do
 
@@ -59,7 +59,7 @@ Users interact through natural language. Here's what they might say and how to r
 
 User: "start a squad called my-squad with claude" / "launch a codex squad for ~/projects/api"
 
-Ask if missing: squad name, engine. Project dir and context are optional.
+Ask if missing: squad name. Default engine to `claude` if not specified. Project dir and context are optional.
 
 First-time users: briefly mention squads run in full-auto mode — the AI has full access to the project directory.
 

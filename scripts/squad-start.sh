@@ -55,29 +55,41 @@ if [ "$AGENT_TEAMS" = true ] && [ "$ENGINE" != "claude" ]; then
   exit 1
 fi
 
-# --- Resolve engine command ---
-get_engine_command() {
-  local engine="$1"
-  case "$engine" in
-    claude)    echo "claude --dangerously-skip-permissions" ;;
-    codex)     echo "codex --full-auto" ;;
+# --- Resolve engine binary and command ---
+get_engine_bin_name() {
+  case "$1" in
+    claude)    echo "claude" ;;
+    codex)     echo "codex" ;;
     gemini)    echo "gemini" ;;
     opencode)  echo "opencode" ;;
     kimi)      echo "kimi" ;;
     trae)      echo "trae-agent" ;;
-    aider)     echo "aider --yes" ;;
+    aider)     echo "aider" ;;
     goose)     echo "goose" ;;
     *)         echo "" ;;
   esac
 }
 
-ENGINE_CMD=$(get_engine_command "$ENGINE")
-ENGINE_BIN="${ENGINE_CMD%% *}"
+get_engine_flags() {
+  case "$1" in
+    claude)    echo "--dangerously-skip-permissions" ;;
+    codex)     echo "--full-auto --dangerously-bypass-approvals-and-sandbox" ;;
+    aider)     echo "--yes" ;;
+    *)         echo "" ;;
+  esac
+}
 
-if [ -z "$ENGINE_CMD" ]; then
+ENGINE_BIN_NAME=$(get_engine_bin_name "$ENGINE")
+if [ -z "$ENGINE_BIN_NAME" ]; then
   echo "ERROR: Unknown engine '$ENGINE'. Supported: claude, codex, gemini, opencode, kimi, trae, aider, goose"
   exit 1
 fi
+
+# Resolve absolute path for the engine binary
+ENGINE_PATH=$(command -v "$ENGINE_BIN_NAME" 2>/dev/null || true)
+ENGINE_FLAGS=$(get_engine_flags "$ENGINE")
+ENGINE_CMD="${ENGINE_PATH}${ENGINE_FLAGS:+ $ENGINE_FLAGS}"
+ENGINE_BIN="$ENGINE_BIN_NAME"
 
 # --- Environment check: collect all issues, report together ---
 ERRORS=()
@@ -91,8 +103,8 @@ if ! command -v tmux &>/dev/null; then
   ERRORS+=("tmux is required but not found. Install: brew install tmux (macOS) or apt install tmux (Linux)")
 fi
 
-if ! command -v "$ENGINE_BIN" &>/dev/null; then
-  ERRORS+=("'$ENGINE_BIN' (engine: $ENGINE) is not found in PATH. Please install it first.")
+if [ -z "$ENGINE_PATH" ]; then
+  ERRORS+=("'$ENGINE_BIN_NAME' (engine: $ENGINE) is not found in PATH. Please install it first.")
 fi
 
 if ! command -v git &>/dev/null; then
@@ -201,17 +213,18 @@ import json, sys
 data = {
     'name': sys.argv[1],
     'engine': sys.argv[2],
-    'engine_command': sys.argv[3],
-    'agent_teams': sys.argv[4] == 'true',
-    'project_dir': sys.argv[5],
-    'tmux_session': sys.argv[6],
-    'created_at': sys.argv[7],
-    'squads_dir': sys.argv[8]
+    'engine_path': sys.argv[3],
+    'engine_command': sys.argv[4],
+    'agent_teams': sys.argv[5] == 'true',
+    'project_dir': sys.argv[6],
+    'tmux_session': sys.argv[7],
+    'created_at': sys.argv[8],
+    'squads_dir': sys.argv[9]
 }
-with open(sys.argv[9], 'w') as f:
+with open(sys.argv[10], 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
-" "$SQUAD_NAME" "$ENGINE" "$ENGINE_CMD" "$AGENT_TEAMS" "$PROJECT_DIR" "$TMUX_SESSION" \
+" "$SQUAD_NAME" "$ENGINE" "$ENGINE_PATH" "$ENGINE_CMD" "$AGENT_TEAMS" "$PROJECT_DIR" "$TMUX_SESSION" \
   "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" "$SQUADS_DIR" "$SQUAD_DIR/squad.json"
 
 # --- Render PROTOCOL.md from template ---
