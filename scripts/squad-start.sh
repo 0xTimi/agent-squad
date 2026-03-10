@@ -10,20 +10,22 @@ BASE_DIR="${HOME}/.openclaw/workspace/agent-squad"
 SQUADS_DIR="${BASE_DIR}/squads"
 
 # --- Args (python3 not needed yet) ---
-SQUAD_NAME="${1:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]}"
-ENGINE="${2:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams]}"
+SQUAD_NAME="${1:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]}"
+ENGINE="${2:?Usage: squad-start.sh <squad-name> <engine> [context-text] [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]}"
 CONTEXT=""
 RESTART=false
 AGENT_TEAMS=false
+NO_WATCHDOG=false
 PROJECT_DIR=""
 args=("${@:3}")
 i=0
 while [ $i -lt ${#args[@]} ]; do
   case "${args[$i]}" in
-    --restart)     RESTART=true ;;
-    --agent-teams) AGENT_TEAMS=true ;;
-    --project)     i=$((i + 1)); PROJECT_DIR="${args[$i]}" ;;
-    *)             CONTEXT="${args[$i]}" ;;
+    --restart)       RESTART=true ;;
+    --agent-teams)   AGENT_TEAMS=true ;;
+    --no-watchdog)   NO_WATCHDOG=true ;;
+    --project)       i=$((i + 1)); PROJECT_DIR="${args[$i]}" ;;
+    *)               CONTEXT="${args[$i]}" ;;
   esac
   i=$((i + 1))
 done
@@ -276,6 +278,9 @@ tmux new-session -d -s "$TMUX_SESSION" -c "$PROJECT_DIR" "$TMUX_CMD"
 } &
 
 # --- Register watchdog cron ---
+if [ "$NO_WATCHDOG" = true ]; then
+  OPENCLAW_AVAILABLE=false
+fi
 if [ "$OPENCLAW_AVAILABLE" = true ]; then
   WATCHDOG_PATH="${SKILL_DIR}/scripts/squad-watchdog.sh"
   CRON_NAME="squad-watchdog-${SQUAD_NAME}"
@@ -310,7 +315,9 @@ else
 fi
 echo "  Squad data:  ${SQUAD_DIR}"
 echo "  tmux:        tmux attach -t ${TMUX_SESSION}  (Ctrl+B D to detach)"
-if [ "$OPENCLAW_AVAILABLE" = true ]; then
+if [ "$NO_WATCHDOG" = true ]; then
+  echo "  Watchdog:    disabled (--no-watchdog)"
+elif [ "$OPENCLAW_AVAILABLE" = true ]; then
   echo "  Watchdog:    openclaw cron (every 5 min)"
 else
   echo "  Watchdog:    not registered (openclaw not found)"

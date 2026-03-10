@@ -1,6 +1,6 @@
 ---
 name: agent-squad
-version: 0.9.0
+version: 0.9.1
 license: MIT-0
 description: "Manage persistent AI coding squads that run in tmux sessions with task queues, progress reports, and automatic health monitoring. Use when the user wants to: (1) start/launch/create/restart a squad or team of AI agents, (2) assign/give tasks to a squad, (3) check squad status or ask what a squad is doing, (4) ping/nudge a squad to report progress, (5) stop a squad, (6) list all active squads, (7) configure squad settings like default project directory, (8) delete/archive a squad. Supports Claude Code, Codex, Gemini CLI, OpenCode, Kimi, Trae, Aider, and Goose as AI engines."
 metadata:
@@ -8,6 +8,8 @@ metadata:
 ---
 
 # Agent Squad
+
+GitHub: https://github.com/0xTimi/agent-squad
 
 Run persistent AI development squads in tmux sessions. Each squad has a coordinator AI that picks up tasks, executes them, and reports progress — all while running unattended in the background.
 
@@ -44,13 +46,14 @@ When the user asks to start/create/launch/restart a squad, collect:
 Then run:
 
 ```bash
-bash scripts/squad-start.sh "<squad-name>" "<engine>" ["<optional-context>"] [--project <dir>] [--restart] [--agent-teams]
+bash scripts/squad-start.sh "<squad-name>" "<engine>" ["<optional-context>"] [--project <dir>] [--restart] [--agent-teams] [--no-watchdog]
 ```
 
 **Flags:**
 - `--project <dir>`: project directory where the squad writes code.
 - `--restart`: reuse an existing squad's data (tasks, reports). Required if the squad name was used before.
 - `--agent-teams`: enable Claude Code Agent Teams mode (claude engine only).
+- `--no-watchdog`: skip watchdog cron registration. The squad will not auto-restart if it crashes.
 
 If the squad name already exists (from a previous run), the script will error and ask the user to either:
 - **Restart** the existing squad: add `--restart` flag
@@ -176,6 +179,9 @@ For supported engines and their configurations, see `references/engines.md`.
 
 - Squads run AI engines in **full-auto mode** — this means the AI operates without any permission prompts and can freely read, write, delete files, and execute commands within the project directory. This is required for unattended background operation. Users should understand this grants the AI full autonomy over the project.
 - **Keep sensitive files out**: credentials, API keys, `.env` files, and private keys should not be in project directories that squads work on.
+- **Git safety**: if git is installed, the squad auto-initializes a git repo and the coordinator commits frequently. For existing projects, consider using a **separate branch or git worktree** so squad commits don't mix with your main history.
+- **Watchdog**: by default a cron job auto-restarts crashed squads every 5 minutes. Use `--no-watchdog` if you prefer manual control.
 - Coordination directory logs are gitignored by default.
 - Each squad runs in its own isolated tmux session.
+- For maximum safety, consider running squads in an **isolated environment** (separate user account, container, or VM) to limit blast radius.
 - The `--agent-teams` flag (Claude only) allows the coordinator to spawn additional AI sub-agents, increasing the scope of autonomous operations.
